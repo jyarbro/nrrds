@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Comic Generator</title>
+    <title>nrrds - A Generated Comic</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,8 +12,8 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1 class="app-title">AI Comic Generator</h1>
-            <p class="app-subtitle">Generate unique comics and help train the AI with your feedback!</p>
+            <h1 class="app-title">nrrds</h1>
+            <p class="app-subtitle">A generated comic guided by community feedback!</p>
         </header>
 
         <main class="main-content">
@@ -38,14 +38,14 @@
             <div class="comic-container" id="comicContainer">
                 <div class="welcome-message">
                     <div class="welcome-icon">🎭</div>
-                    <h2>Welcome to AI Comic Generator!</h2>
-                    <p>Click "Generate New Comic" to create your first AI-powered comic strip.</p>
-                    <p>Your feedback helps train the AI to create better comics!</p>
+                    <h2>Welcome to nrrds!</h2>
+                    <p>Click "Generate New Comic" to create your first nrrds-powered comic strip.</p>
+                    <p>Your feedback helps train nrrds AI to create better comics!</p>
                 </div>
             </div>
 
             <div class="feedback-section" id="feedbackSection" style="display: none;">
-                <h3 class="feedback-title">How did you like this comic?</h3>
+                <h3 class="feedback-title">How did you like this nrrds comic?</h3>
                 <div class="emoji-feedback-grid">
                     <button class="emoji-btn" data-feedback="love" data-phrase="absolutely loved it">
                         <span class="emoji">😍</span>
@@ -85,20 +85,20 @@
         </main>
 
         <footer class="app-footer">
-            <p>Powered by AI • Your feedback helps improve future comics</p>
+            <p>Powered by nrrds AI • Your feedback helps improve future comics</p>
         </footer>
     </div>
 
     <!-- Loading overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
-        <p class="loading-text">Generating your comic...</p>
+        <p class="loading-text">nrrds is generating your comic...</p>
     </div>
 
     <!-- Error modal -->
     <div class="error-modal" id="errorModal">
         <div class="error-content">
-            <h3>Oops! Something went wrong</h3>
+            <h3>Oops! Something went wrong with nrrds</h3>
             <p id="errorMessage"></p>
             <button class="control-btn" onclick="closeError()">Try Again</button>
         </div>
