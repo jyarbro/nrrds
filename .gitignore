@@ -1,5 +1,8 @@
 .github/
+.vscode/
 node_modules/
+
 package-lock.json
-*.code-workspace
 .env
+*.code-workspace
+*.log
