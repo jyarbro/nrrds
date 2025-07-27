@@ -220,6 +220,18 @@ class ComicAPI {
             return [];
         }
     }
+    
+    // Simple test API call to check CORS
+    async testApi() {
+        try {
+            const data = await this.fetchAPI('test');
+            console.log('Test API response:', data);
+            return data;
+        } catch (error) {
+            console.error('Test API error:', error);
+            throw error;
+        }
+    }
 }
 
 // Create and export a singleton instance

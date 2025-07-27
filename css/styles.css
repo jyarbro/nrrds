@@ -109,6 +109,15 @@ body {
     padding: 15px 30px;
 }
 
+.secondary-btn {
+    background: linear-gradient(45deg, var(--secondary-color), #34A29E);
+    color: white;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    padding: 10px 20px;
+}
+
 .navigation-controls {
     display: flex;
     align-items: center;
