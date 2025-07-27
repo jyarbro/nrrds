@@ -1,5 +1,7 @@
 // Feedback system for collecting user reactions
-class FeedbackSystem {
+import comicAPI from './api.js';
+
+export default class FeedbackSystem {
     constructor() {
         this.feedbackSection = document.getElementById('feedbackSection');
         this.feedbackStats = document.getElementById('feedbackStats');

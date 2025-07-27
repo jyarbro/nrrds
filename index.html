@@ -104,10 +104,14 @@
         </div>
     </div>
 
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/comic-renderer.js"></script>
-    <script src="js/feedback.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Include the function for error modal that's used inline -->
+    <script>
+        function closeError() {
+            document.getElementById('errorModal').style.display = 'none';
+        }
+    </script>
+    
+    <!-- Main application script as a module -->
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

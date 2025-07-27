@@ -1,4 +1,7 @@
 // Main application controller
+import comicAPI from './api.js';
+import { CONFIG } from './config.js';
+
 class ComicApp {
     constructor() {
         this.comicHistory = [];
@@ -406,3 +409,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
+
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new ComicApp();
+});
+
+// Export for module usage
+export default ComicApp;

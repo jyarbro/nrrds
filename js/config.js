@@ -1,7 +1,15 @@
 // Configuration for the comic app
-const CONFIG = {
-    // API endpoints - Use environment variable
-    API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+// Safely access import.meta.env
+let apiBaseUrl = '';
+try {
+  apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || '';
+} catch (e) {
+  console.warn('Unable to access import.meta.env, using empty API base URL');
+}
+
+export const CONFIG = {
+    // API endpoints - Use environment variable (no fallback)
+    API_BASE_URL: apiBaseUrl,
     
     // Local storage keys
     STORAGE_KEYS: {

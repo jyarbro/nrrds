@@ -1,4 +1,6 @@
 // API client for communicating with Vercel Functions
+import { CONFIG } from './config.js';
+
 class ComicAPI {
     constructor() {
         this.baseURL = CONFIG.API_BASE_URL;
@@ -222,3 +224,4 @@ class ComicAPI {
 
 // Create and export a singleton instance
 const comicAPI = new ComicAPI();
+export default comicAPI;

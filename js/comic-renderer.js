@@ -1,5 +1,5 @@
 // Comic rendering module
-class ComicRenderer {
+export default class ComicRenderer {
     constructor() {
         this.container = document.getElementById('comicContainer');
     }
