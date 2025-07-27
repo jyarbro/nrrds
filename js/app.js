@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.comicApp = new ComicApp();
     
     // Add some sample comics for testing (remove in production)
-    if (window.location.hostname === 'localhost' || window.location.protocol === 'file:') {
+    if (import.meta.env.DEV) {
         // Override API to return sample data for testing
         const originalGenerateComic = comicAPI.generateComic.bind(comicAPI);
         comicAPI.generateComic = async function(preferences) {

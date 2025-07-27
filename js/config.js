@@ -1,7 +1,7 @@
 // Configuration for the comic app
 const CONFIG = {
-    // API endpoints - Use local API for development
-    API_BASE_URL: 'http://localhost:3000',
+    // API endpoints - Use environment variable
+    API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
     
     // Local storage keys
     STORAGE_KEYS: {
