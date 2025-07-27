@@ -1,9 +1,7 @@
 // Configuration for the comic app
 const CONFIG = {
-    // API endpoints - Update this with your Vercel deployment URL
-    API_BASE_URL: window.location.hostname === 'localhost' 
-        ? 'http://localhost:3000' 
-        : 'https://your-vercel-app.vercel.app',
+    // API endpoints - Use local API for development
+    API_BASE_URL: 'http://localhost:3000',
     
     // Local storage keys
     STORAGE_KEYS: {

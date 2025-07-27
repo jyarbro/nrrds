@@ -199,24 +199,43 @@ class ComicApp {
     // Load history from local storage
     async loadHistoryFromStorage() {
         try {
+            console.log('Loading history from local storage...');
             const stored = localStorage.getItem(CONFIG.STORAGE_KEYS.COMIC_HISTORY);
-            if (!stored) return;
+            if (!stored) {
+                console.log('No comic history found in local storage');
+                return;
+            }
             
             const { history, currentIndex } = JSON.parse(stored);
+            console.log(`Found ${history.length} comics in history`);
+            
+            // Check if we're using the production or local API
+            if (CONFIG.API_BASE_URL.includes('api.nrrds.com')) {
+                console.log('Using production API');
+            } else {
+                console.log('Using local development API:', CONFIG.API_BASE_URL);
+            }
             
             // Load full comic data for recent items
             const recentCount = 5;
+            console.log(`Attempting to load ${Math.min(history.length, recentCount)} recent comics`);
+            
             const loadPromises = history.slice(-recentCount).map(async (item) => {
                 try {
+                    console.log(`Attempting to load comic: ${item.id}`);
                     return await comicAPI.getComic(item.id);
                 } catch (error) {
                     console.error(`Failed to load comic ${item.id}:`, error);
+                    if (error.status === 404) {
+                        console.log(`Comic ${item.id} not found in backend storage - may need to regenerate`);
+                    }
                     return null;
                 }
             });
             
             const loadedComics = await Promise.all(loadPromises);
             const validComics = loadedComics.filter(comic => comic !== null);
+            console.log(`Successfully loaded ${validComics.length} comics`);
             
             if (validComics.length > 0) {
                 this.comicHistory = validComics;
@@ -228,6 +247,13 @@ class ComicApp {
                 }
                 
                 this.updateNavigation();
+            } else {
+                console.log('No valid comics were loaded from history');
+                // Clear invalid history to prevent repeated errors
+                this.comicHistory = [];
+                this.currentIndex = -1;
+                this.saveHistoryToStorage();
+                console.log('Comic history was reset due to loading failures');
             }
         } catch (error) {
             console.error('Failed to load history:', error);

@@ -18,22 +18,45 @@ class ComicAPI {
     // Generic fetch wrapper with error handling
     async fetchAPI(endpoint, options = {}) {
         try {
-            const response = await fetch(`${this.baseURL}/api/${endpoint}`, {
+            console.log(`API Request: ${this.baseURL}/api/${endpoint}`);
+            
+            // Add credentials for CORS requests
+            const fetchOptions = {
                 ...options,
+                credentials: 'include',
+                mode: 'cors',
                 headers: {
                     'Content-Type': 'application/json',
                     ...options.headers
                 }
-            });
+            };
+            
+            const response = await fetch(`${this.baseURL}/api/${endpoint}`, fetchOptions);
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                // Try to get error details from the response
+                let errorDetails = {};
+                try {
+                    errorDetails = await response.json();
+                } catch (e) {
+                    // Response is not JSON, ignore
+                }
+                
+                const error = new Error(`HTTP error! status: ${response.status}`);
+                error.status = response.status;
+                error.details = errorDetails;
+                throw error;
             }
 
             const data = await response.json();
             return data;
         } catch (error) {
             console.error(`API Error (${endpoint}):`, error);
+            // Add details about the API endpoint and URL
+            console.error(`API URL: ${this.baseURL}/api/${endpoint}`);
+            if (error.details) {
+                console.error('Error details:', error.details);
+            }
             throw error;
         }
     }
