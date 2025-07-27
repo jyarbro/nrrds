@@ -1,7 +1,7 @@
 {
-  "name": "nrrds-frontend",
+  "name": "nrrds",
   "version": "1.0.0",
-  "description": "Frontend for nrrds comic generator",
+  "description": "nrrds.com comic generator",
   "type": "module",
   "scripts": {
     "dev": "vite",
