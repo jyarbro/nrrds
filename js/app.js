@@ -1,6 +1,8 @@
 // Main application controller
 import comicAPI from './api.js';
 import { CONFIG } from './config.js';
+import { comicRenderer } from './comic-renderer.js';
+import { feedbackSystem } from './feedback.js';
 
 class ComicApp {
     constructor() {

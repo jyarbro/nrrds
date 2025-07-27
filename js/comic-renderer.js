@@ -291,3 +291,4 @@ document.head.appendChild(style);
 
 // Create and export singleton instance
 const comicRenderer = new ComicRenderer();
+export { comicRenderer };

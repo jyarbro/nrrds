@@ -1,5 +1,6 @@
 // Feedback system for collecting user reactions
 import comicAPI from './api.js';
+import { CONFIG } from './config.js';
 
 export default class FeedbackSystem {
     constructor() {
@@ -304,3 +305,4 @@ document.head.appendChild(feedbackStyle);
 
 // Create and export singleton instance
 const feedbackSystem = new FeedbackSystem();
+export { feedbackSystem };
