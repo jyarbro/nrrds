@@ -286,7 +286,7 @@ function closeError() {
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     // Create app instance
-    window.comicApp = new ComicApp();
+    window.app = new ComicApp();
     
     // Add some sample comics for testing (remove in production)
     if (import.meta.env?.DEV) {
@@ -410,11 +410,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return sampleComics[theme];
         };
     }
-});
-
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new ComicApp();
 });
 
 // Export for module usage

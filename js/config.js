@@ -1,13 +1,14 @@
 let apiBaseUrl = '';
 try {
-  // In development mode (on localhost), use relative path to leverage Vite proxy
   const isDev = window.location.hostname === 'localhost';
   apiBaseUrl = isDev ? '' : (import.meta.env?.VITE_API_BASE_URL || 'https://api.nrrds.com');
-  console.log('API base URL set to:', apiBaseUrl, 'isDev:', isDev);
-} catch (e) {
-  console.warn('Unable to access import.meta.env, using empty API base URL');
-}
+} catch (e) {}
 
+/**
+ * Application configuration constants for nrrds frontend.
+ * @readonly
+ * @type {Object}
+ */
 export const CONFIG = {
     // API endpoints - Use environment variable (no fallback)
     API_BASE_URL: apiBaseUrl,

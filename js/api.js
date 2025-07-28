@@ -1,13 +1,18 @@
-// API client for communicating with Vercel Functions
 import { CONFIG } from './config.js';
 
+/**
+ * API client for communicating with Vercel Functions and backend endpoints for comics.
+ */
 class ComicAPI {
     constructor() {
         this.baseURL = CONFIG.API_BASE_URL;
         this.userId = this.getOrCreateUserId();
     }
 
-    // Get or create a unique user ID
+    /**
+     * Get or create a unique user ID stored in localStorage.
+     * @returns {string} The user ID.
+     */
     getOrCreateUserId() {
         let userId = localStorage.getItem(CONFIG.STORAGE_KEYS.USER_ID);
         if (!userId) {
@@ -17,16 +22,16 @@ class ComicAPI {
         return userId;
     }
 
-    // Generic fetch wrapper with error handling
+    /**
+     * Generic fetch wrapper with error handling.
+     * @param {string} endpoint - API endpoint.
+     * @param {object} [options={}] - Fetch options.
+     * @returns {Promise<any>} Response data.
+     */
     async fetchAPI(endpoint, options = {}) {
         try {
-            // Check if we're in development mode (localhost)
             const isDev = window.location.hostname === 'localhost';
             const url = isDev ? `/api/${endpoint}` : `${this.baseURL}/api/${endpoint}`;
-            
-            console.log(`API Request: ${url} (isDev: ${isDev})`);
-            
-            // In dev mode with proxy, don't need CORS
             const fetchOptions = {
                 ...options,
                 credentials: isDev ? 'omit' : 'include',
@@ -36,38 +41,29 @@ class ComicAPI {
                     ...options.headers
                 }
             };
-            
             const response = await fetch(url, fetchOptions);
-
             if (!response.ok) {
-                // Try to get error details from the response
                 let errorDetails = {};
                 try {
                     errorDetails = await response.json();
-                } catch (e) {
-                    // Response is not JSON, ignore
-                }
-                
+                } catch (e) {}
                 const error = new Error(`HTTP error! status: ${response.status}`);
                 error.status = response.status;
                 error.details = errorDetails;
                 throw error;
             }
-
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error(`API Error (${endpoint}):`, error);
-            // Add details about the API endpoint and URL
-            console.error(`API URL: ${this.baseURL}/api/${endpoint}`);
-            if (error.details) {
-                console.error('Error details:', error.details);
-            }
             throw error;
         }
     }
 
-    // Generate a new comic
+    /**
+     * Generate a new comic.
+     * @param {object} [preferences={}] - User preferences for generation.
+     * @returns {Promise<object>} The generated comic.
+     */
     async generateComic(preferences = {}) {
         try {
             const data = await this.fetchAPI('generate-comic', {
@@ -78,42 +74,45 @@ class ComicAPI {
                     timestamp: new Date().toISOString()
                 })
             });
-
             if (!data.success || !data.comic) {
                 throw new Error(data.error || CONFIG.ERRORS.GENERATION_FAILED);
             }
-
             return data.comic;
         } catch (error) {
-            console.error('Generate comic error:', error);
             throw new Error(CONFIG.ERRORS.GENERATION_FAILED);
         }
     }
 
-    // Get a specific comic by ID
+    /**
+     * Get a specific comic by ID.
+     * @param {string} comicId - Comic ID.
+     * @returns {Promise<object>} The comic data.
+     */
     async getComic(comicId) {
         try {
             const data = await this.fetchAPI(`get-comic?id=${comicId}`);
-            
             if (!data.success || !data.comic) {
                 throw new Error(data.error || 'Comic not found');
             }
-
             return data.comic;
         } catch (error) {
-            console.error('Get comic error:', error);
             throw error;
         }
     }
 
-    // Submit feedback for a comic
+    /**
+     * Submit feedback for a comic.
+     * @param {string} comicId - Comic ID.
+     * @param {string} feedbackType - Feedback type key.
+     * @param {object} [additionalData={}] - Additional feedback data.
+     * @returns {Promise<object>} Feedback response.
+     */
     async submitFeedback(comicId, feedbackType, additionalData = {}) {
         try {
             const feedbackData = CONFIG.FEEDBACK_TYPES[feedbackType];
             if (!feedbackData) {
                 throw new Error('Invalid feedback type');
             }
-
             const data = await this.fetchAPI('submit-feedback', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -126,67 +125,70 @@ class ComicAPI {
                     ...additionalData
                 })
             });
-
             if (!data.success) {
                 throw new Error(data.error || CONFIG.ERRORS.FEEDBACK_FAILED);
             }
-
             return data;
         } catch (error) {
-            console.error('Submit feedback error:', error);
             throw new Error(CONFIG.ERRORS.FEEDBACK_FAILED);
         }
     }
 
-    // Get feedback statistics for a comic
+    /**
+     * Get feedback statistics for a comic.
+     * @param {string} comicId - Comic ID.
+     * @returns {Promise<object>} Feedback stats.
+     */
     async getFeedbackStats(comicId) {
         try {
             const data = await this.fetchAPI(`get-feedback?comicId=${comicId}`);
-            
             if (!data.success) {
                 throw new Error(data.error || 'Failed to get feedback');
             }
-
             return data.stats || {};
         } catch (error) {
-            console.error('Get feedback stats error:', error);
             return {};
         }
     }
 
-    // Get popular comics based on feedback
+    /**
+     * Get popular comics based on feedback.
+     * @param {number} [limit=10] - Number of comics to return.
+     * @returns {Promise<object[]>} List of comics.
+     */
     async getPopularComics(limit = 10) {
         try {
             const data = await this.fetchAPI(`get-popular?limit=${limit}`);
-            
             if (!data.success) {
                 throw new Error(data.error || 'Failed to get popular comics');
             }
-
             return data.comics || [];
         } catch (error) {
-            console.error('Get popular comics error:', error);
             return [];
         }
     }
 
-    // Get user's feedback preferences (for AI training)
+    /**
+     * Get user's feedback preferences (for AI training).
+     * @returns {Promise<object>} User preferences.
+     */
     async getUserPreferences() {
         try {
             const data = await this.fetchAPI(`get-user-preferences?userId=${this.userId}`);
-            
             if (!data.success) {
                 throw new Error(data.error || 'Failed to get preferences');
             }
-
             return data.preferences || {};
         } catch (error) {
-            console.error('Get user preferences error:', error);
             return {};
         }
     }
 
-    // Save comic to Redis storage
+    /**
+     * Save comic to Redis storage.
+     * @param {object} comic - Comic data.
+     * @returns {Promise<string>} Comic ID.
+     */
     async saveComic(comic) {
         try {
             const data = await this.fetchAPI('save-comic', {
@@ -197,36 +199,32 @@ class ComicAPI {
                     timestamp: new Date().toISOString()
                 })
             });
-
             if (!data.success) {
                 throw new Error(data.error || 'Failed to save comic');
             }
-
             return data.comicId;
         } catch (error) {
-            console.error('Save comic error:', error);
             throw error;
         }
     }
 
-    // Get user's comic history
+    /**
+     * Get user's comic history.
+     * @param {number} [limit=20] - Number of comics to return.
+     * @returns {Promise<object[]>} List of comics.
+     */
     async getUserHistory(limit = 20) {
         try {
             const data = await this.fetchAPI(`get-user-history?userId=${this.userId}&limit=${limit}`);
-            
             if (!data.success) {
                 throw new Error(data.error || 'Failed to get history');
             }
-
             return data.comics || [];
         } catch (error) {
-            console.error('Get user history error:', error);
             return [];
         }
     }
-    
 }
 
-// Create and export a singleton instance
 const comicAPI = new ComicAPI();
 export default comicAPI;
