@@ -1,8 +1,6 @@
-// Configuration for the comic app
-// Safely access import.meta.env
 let apiBaseUrl = '';
 try {
-  apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || '';
+  apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || 'https://api.nrrds.com';
 } catch (e) {
   console.warn('Unable to access import.meta.env, using empty API base URL');
 }
