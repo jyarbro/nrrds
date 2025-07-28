@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.comicApp = new ComicApp();
     
     // Add some sample comics for testing (remove in production)
-    if (import.meta.env.DEV) {
+    if (import.meta.env?.DEV) {
         // Override API to return sample data for testing
         const originalGenerateComic = comicAPI.generateComic.bind(comicAPI);
         comicAPI.generateComic = async function(preferences) {
