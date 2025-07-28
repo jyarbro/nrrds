@@ -20,20 +20,24 @@ class ComicAPI {
     // Generic fetch wrapper with error handling
     async fetchAPI(endpoint, options = {}) {
         try {
-            console.log(`API Request: ${this.baseURL}/api/${endpoint}`);
+            // Check if we're in development mode (localhost)
+            const isDev = window.location.hostname === 'localhost';
+            const url = isDev ? `/api/${endpoint}` : `${this.baseURL}/api/${endpoint}`;
             
-            // Add credentials for CORS requests
+            console.log(`API Request: ${url} (isDev: ${isDev})`);
+            
+            // In dev mode with proxy, don't need CORS
             const fetchOptions = {
                 ...options,
-                credentials: 'include',
-                mode: 'cors',
+                credentials: isDev ? 'omit' : 'include',
+                mode: isDev ? 'same-origin' : 'cors',
                 headers: {
                     'Content-Type': 'application/json',
                     ...options.headers
                 }
             };
             
-            const response = await fetch(`${this.baseURL}/api/${endpoint}`, fetchOptions);
+            const response = await fetch(url, fetchOptions);
 
             if (!response.ok) {
                 // Try to get error details from the response
@@ -221,17 +225,6 @@ class ComicAPI {
         }
     }
     
-    // Simple test API call to check CORS
-    async testApi() {
-        try {
-            const data = await this.fetchAPI('test');
-            console.log('Test API response:', data);
-            return data;
-        } catch (error) {
-            console.error('Test API error:', error);
-            throw error;
-        }
-    }
 }
 
 // Create and export a singleton instance

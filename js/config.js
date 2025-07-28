@@ -1,6 +1,9 @@
 let apiBaseUrl = '';
 try {
-  apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || 'https://api.nrrds.com';
+  // In development mode (on localhost), use relative path to leverage Vite proxy
+  const isDev = window.location.hostname === 'localhost';
+  apiBaseUrl = isDev ? '' : (import.meta.env?.VITE_API_BASE_URL || 'https://api.nrrds.com');
+  console.log('API base URL set to:', apiBaseUrl, 'isDev:', isDev);
 } catch (e) {
   console.warn('Unable to access import.meta.env, using empty API base URL');
 }

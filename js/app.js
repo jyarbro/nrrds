@@ -19,7 +19,6 @@ class ComicApp {
     // Initialize DOM elements
     initializeElements() {
         this.generateBtn = document.getElementById('generateBtn');
-        this.testApiBtn = document.getElementById('testApiBtn');
         this.prevBtn = document.getElementById('prevBtn');
         this.nextBtn = document.getElementById('nextBtn');
         this.comicCounter = document.getElementById('comicCounter');
@@ -31,7 +30,6 @@ class ComicApp {
     // Initialize event listeners
     initializeEventListeners() {
         this.generateBtn.addEventListener('click', () => this.generateNewComic());
-        this.testApiBtn.addEventListener('click', () => this.testApiConnection());
         this.prevBtn.addEventListener('click', () => this.navigatePrevious());
         this.nextBtn.addEventListener('click', () => this.navigateNext());
         
@@ -45,31 +43,6 @@ class ComicApp {
         });
     }
 
-    // Test API connection
-    async testApiConnection() {
-        if (this.isLoading) return;
-        
-        this.isLoading = true;
-        this.showLoading();
-        
-        try {
-            // Call the test API endpoint
-            const result = await comicAPI.testApi();
-            
-            // Show success message
-            alert(`CORS test successful! API response: ${JSON.stringify(result)}`);
-            console.log('Test API response:', result);
-            
-            this.hideLoading();
-        } catch (error) {
-            console.error('Test API error:', error);
-            
-            // Show error in modal
-            this.showError(`CORS Test Failed: ${error.message || 'Unknown error'}`);
-            this.hideLoading();
-        }
-    }
-    
     // Generate a new comic
     async generateNewComic() {
         if (this.isLoading) return;
