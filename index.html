@@ -47,37 +47,90 @@
             <div class="feedback-section" id="feedbackSection" style="display: none;">
                 <h3 class="feedback-title">How did you like this nrrds comic?</h3>
                 <div class="emoji-feedback-grid">
-                    <button class="emoji-btn" data-feedback="love" data-phrase="absolutely loved it">
-                        <span class="emoji">😍</span>
-                        <span class="label">Love it!</span>
+                    <!-- 21 unique emotions, strictly ordered from most positive to most negative -->
+                    <button class="emoji-btn" data-feedback="love" data-phrase="felt love or adoration">
+                        <span class="emoji">💖</span>
+                        <span class="label">Love</span>
                     </button>
-                    <button class="emoji-btn" data-feedback="funny" data-phrase="found it hilarious">
+                    <button class="emoji-btn" data-feedback="wholesome" data-phrase="thought it was wholesome">
+                        <span class="emoji">🥰</span>
+                        <span class="label">Wholesome</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="uplifted" data-phrase="felt uplifted">
+                        <span class="emoji">🕊️</span>
+                        <span class="label">Uplifted</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="applauding" data-phrase="wanted to applaud or was impressed">
+                        <span class="emoji">👏</span>
+                        <span class="label">Applauding</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="amused" data-phrase="was amused or laughed">
                         <span class="emoji">😂</span>
-                        <span class="label">Funny</span>
+                        <span class="label">Amused</span>
                     </button>
-                    <button class="emoji-btn" data-feedback="clever" data-phrase="thought it was clever">
-                        <span class="emoji">🤓</span>
+                    <button class="emoji-btn" data-feedback="inspired" data-phrase="felt inspired">
+                        <span class="emoji">💡</span>
+                        <span class="label">Inspired</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="clever" data-phrase="thought it was clever or smart">
+                        <span class="emoji">🧠</span>
                         <span class="label">Clever</span>
                     </button>
-                    <button class="emoji-btn" data-feedback="inspiring" data-phrase="felt inspired">
-                        <span class="emoji">✨</span>
-                        <span class="label">Inspiring</span>
+                    <button class="emoji-btn" data-feedback="heroic" data-phrase="felt heroic or empowered">
+                        <span class="emoji">🦸</span>
+                        <span class="label">Heroic</span>
                     </button>
-                    <button class="emoji-btn" data-feedback="confused" data-phrase="didn't understand it">
-                        <span class="emoji">😕</span>
+                    <button class="emoji-btn" data-feedback="unique" data-phrase="thought it was unique or weird">
+                        <span class="emoji">🦄</span>
+                        <span class="label">Unique</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="relatable" data-phrase="found it relatable">
+                        <span class="emoji">🫂</span>
+                        <span class="label">Relatable</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="mindblown" data-phrase="mind blown">
+                        <span class="emoji">🤯</span>
+                        <span class="label">Mind-blown</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="surprised" data-phrase="was surprised or shocked">
+                        <span class="emoji">😱</span>
+                        <span class="label">Surprised</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="confused" data-phrase="felt confused">
+                        <span class="emoji">🌀</span>
                         <span class="label">Confused</span>
                     </button>
-                    <button class="emoji-btn" data-feedback="boring" data-phrase="found it boring">
-                        <span class="emoji">😴</span>
-                        <span class="label">Boring</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="offensive" data-phrase="found it inappropriate">
-                        <span class="emoji">😠</span>
-                        <span class="label">Offensive</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="meh" data-phrase="felt neutral about it">
+                    <button class="emoji-btn" data-feedback="meh" data-phrase="felt neutral or meh">
                         <span class="emoji">😐</span>
                         <span class="label">Meh</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="bored" data-phrase="felt bored">
+                        <span class="emoji">😴</span>
+                        <span class="label">Bored</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="cringe" data-phrase="felt cringe">
+                        <span class="emoji">😬</span>
+                        <span class="label">Cringe</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="sad" data-phrase="felt sad">
+                        <span class="emoji">😢</span>
+                        <span class="label">Sad</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="scared" data-phrase="felt scared">
+                        <span class="emoji">👻</span>
+                        <span class="label">Scared</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="disgusted" data-phrase="felt disgusted">
+                        <span class="emoji">🤢</span>
+                        <span class="label">Disgusted</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="angry" data-phrase="felt angry">
+                        <span class="emoji">😡</span>
+                        <span class="label">Angry</span>
+                    </button>
+                    <button class="emoji-btn" data-feedback="offended" data-phrase="felt offended">
+                        <span class="emoji">🚫</span>
+                        <span class="label">Offended</span>
                     </button>
                 </div>
                 <div class="feedback-stats" id="feedbackStats"></div>
