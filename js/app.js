@@ -110,6 +110,9 @@ class ComicApp {
 
     // Display a comic
     displayComic(comic) {
+        // Store current comic for feedback system
+        this.currentComic = comic;
+        
         // Render the comic
         comicRenderer.render(comic);
         
@@ -118,6 +121,11 @@ class ComicApp {
         
         // Update counter
         this.updateCounter();
+    }
+    
+    // Get current comic data (for feedback system)
+    getCurrentComic() {
+        return this.currentComic || null;
     }
 
     // Navigate to previous comic
@@ -287,129 +295,6 @@ function closeError() {
 document.addEventListener('DOMContentLoaded', () => {
     // Create app instance
     window.app = new ComicApp();
-    
-    // Add some sample comics for testing (remove in production)
-    if (import.meta.env?.DEV) {
-        // Override API to return sample data for testing
-        const originalGenerateComic = comicAPI.generateComic.bind(comicAPI);
-        comicAPI.generateComic = async function(preferences) {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Generate sample comic
-            const comicId = `comic_${Date.now()}`;
-            const themes = ['tech', 'life', 'work', 'fun'];
-            const theme = themes[Math.floor(Math.random() * themes.length)];
-            
-            const sampleComics = {
-                tech: {
-                    id: comicId,
-                    title: "The Debugging Adventure",
-                    panels: [
-                        {
-                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            header: "10:00 AM",
-                            character: { emoji: "😊", style: 1 },
-                            dialogue: ["This bug should be easy to fix!", "Just a simple typo, probably..."]
-                        },
-                        {
-                            background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                            header: "2:00 PM",
-                            character: { emoji: "😰", style: 2, effect: "shake" },
-                            dialogue: [
-                                { text: "WHY ISN'T THIS WORKING?!", style: "angry" },
-                                { text: "I've tried everything...", type: "thought" }
-                            ]
-                        },
-                        {
-                            background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-                            header: "6:00 PM",
-                            character: { emoji: "😭", style: 3 },
-                            dialogue: ["It was a semicolon.", "A. Single. Semicolon."]
-                        }
-                    ],
-                    credits: "Every developer's story • Generated with AI"
-                },
-                life: {
-                    id: comicId,
-                    title: "Monday Morning Motivation",
-                    panels: [
-                        {
-                            background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-                            header: "Sunday Night",
-                            character: { emoji: "😎", style: 4 },
-                            dialogue: ["Tomorrow I'm going to be so productive!", "New week, new me!"]
-                        },
-                        {
-                            background: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
-                            header: "Monday 7:00 AM",
-                            character: { emoji: "😴", style: 5, effect: "shake" },
-                            dialogue: ["Just... five more minutes...", { text: "Or maybe an hour", type: "thought" }]
-                        },
-                        {
-                            background: "linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)",
-                            header: "Monday 9:00 AM",
-                            character: { emoji: "☕", style: 1 },
-                            dialogue: ["Coffee first.", "Productivity... eventually."]
-                        }
-                    ],
-                    credits: "The eternal struggle • AI Generated"
-                },
-                work: {
-                    id: comicId,
-                    title: "The Meeting That Could've Been an Email",
-                    panels: [
-                        {
-                            background: "linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)",
-                            header: "Meeting Invite",
-                            character: { emoji: "📧", style: 2 },
-                            dialogue: ["Quick sync - 30 minutes", "Should be brief!"]
-                        },
-                        {
-                            background: "linear-gradient(135deg, #fddb92 0%, #d1fdff 100%)",
-                            header: "45 Minutes Later",
-                            character: { emoji: "😐", style: 3 },
-                            dialogue: ["So... what are we discussing?", { text: "This could've been an email", type: "thought" }]
-                        },
-                        {
-                            background: "linear-gradient(135deg, #9890e3 0%, #b1f4cf 100%)",
-                            header: "90 Minutes Later",
-                            character: { emoji: "💀", style: 4, effect: "shake" },
-                            dialogue: ["Let's schedule a follow-up meeting", { text: "NOOOOOOO!", style: "angry" }]
-                        }
-                    ],
-                    credits: "Corporate life in a nutshell • AI Comic"
-                },
-                fun: {
-                    id: comicId,
-                    title: "The Snack Dilemma",
-                    panels: [
-                        {
-                            background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-                            header: "The Kitchen",
-                            character: { emoji: "🤔", style: 5 },
-                            dialogue: ["I'm hungry...", "Let me check what we have"]
-                        },
-                        {
-                            background: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
-                            header: "The Fridge",
-                            character: { emoji: "😕", style: 1, effect: "bounce" },
-                            dialogue: ["Hmm... nothing looks good", { text: "Maybe the pantry?", type: "thought" }]
-                        },
-                        {
-                            background: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)",
-                            header: "5 Minutes Later",
-                            character: { emoji: "🍕", style: 2 },
-                            dialogue: ["Hello, pizza delivery?", "Yes, the usual please."]
-                        }
-                    ],
-                    credits: "A universal experience • Created by AI"
-                }
-            };
-            
-            return sampleComics[theme];
-        };
-    }
 });
 
 // Export for module usage

@@ -29,12 +29,6 @@ export default class ComicRenderer {
             strip.appendChild(panelElement);
         });
         comicWrapper.appendChild(strip);
-        if (comic.credits) {
-            const credits = document.createElement('div');
-            credits.className = 'comic-credits';
-            credits.textContent = comic.credits;
-            comicWrapper.appendChild(credits);
-        }
         this.container.appendChild(comicWrapper);
         this.animatePanels();
     }

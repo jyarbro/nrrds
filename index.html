@@ -13,7 +13,7 @@
     <div class="app-container">
         <header class="app-header">
             <h1 class="app-title">nrrds</h1>
-            <p class="app-subtitle">A generated comic guided by community feedback!</p>
+            <p class="app-subtitle">A generated comic guided by your reaction!</p>
         </header>
 
         <main class="main-content">
@@ -39,15 +39,14 @@
                 <div class="welcome-message">
                     <div class="welcome-icon">🎭</div>
                     <h2>Welcome to nrrds!</h2>
-                    <p>Click "Generate New Comic" to create your first nrrds-powered comic strip.</p>
-                    <p>Your feedback helps train nrrds AI to create better comics!</p>
+                    <p>Generated comics will appear here.</p>
+                    <p>Your reactions help train nrrds AI to create better comics!</p>
                 </div>
             </div>
 
             <div class="feedback-section" id="feedbackSection" style="display: none;">
-                <h3 class="feedback-title">How did you like this nrrds comic?</h3>
+                <h3 class="feedback-title">What's your reaction?</h3>
                 <div class="emoji-feedback-grid">
-                    <!-- 21 unique emotions, strictly ordered from most positive to most negative -->
                     <button class="emoji-btn" data-feedback="love" data-phrase="felt love or adoration">
                         <span class="emoji">💖</span>
                         <span class="label">Love</span>
@@ -133,12 +132,12 @@
                         <span class="label">Offended</span>
                     </button>
                 </div>
-                <div class="feedback-stats" id="feedbackStats"></div>
+                <div class="reaction-stats" id="feedbackStats"></div>
             </div>
         </main>
 
         <footer class="app-footer">
-            <p>Powered by nrrds AI • Your feedback helps improve future comics</p>
+            <p>Powered by nrrds AI • Your reactions help improve future comics</p>
         </footer>
     </div>
 
