@@ -18,7 +18,8 @@ export const CONFIG = {
         USER_ID: 'comic_user_id',
         COMIC_HISTORY: 'comic_history',
         USER_PREFERENCES: 'user_preferences',
-        TOKEN_PREFERENCES: 'token_preferences'
+        TOKEN_PREFERENCES: 'token_preferences',
+        SEEN_COMICS: 'seen_comics'
     },
     
     // Comic generation settings

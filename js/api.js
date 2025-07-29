@@ -249,6 +249,24 @@ class ComicAPI {
             return [];
         }
     }
+
+    /**
+     * Get recent comics from global pool (for new users).
+     * @param {number} [limit=10] - Number of comics to return.
+     * @returns {Promise<object[]>} List of recent comics.
+     */
+    async getRecentComics(limit = 10) {
+        try {
+            const data = await this.fetchAPI(`get-recent-comics?limit=${limit}`);
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to get recent comics');
+            }
+            return data.comics || [];
+        } catch (error) {
+            console.error('Failed to get recent comics:', error);
+            return [];
+        }
+    }
 }
 
 const comicAPI = new ComicAPI();

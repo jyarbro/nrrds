@@ -18,10 +18,7 @@ class ComicApp {
 
     // Initialize DOM elements
     initializeElements() {
-        this.generateBtn = document.getElementById('generateBtn');
-        this.prevBtn = document.getElementById('prevBtn');
         this.nextBtn = document.getElementById('nextBtn');
-        this.comicCounter = document.getElementById('comicCounter');
         this.loadingOverlay = document.getElementById('loadingOverlay');
         this.errorModal = document.getElementById('errorModal');
         this.errorMessage = document.getElementById('errorMessage');
@@ -29,18 +26,58 @@ class ComicApp {
 
     // Initialize event listeners
     initializeEventListeners() {
-        this.generateBtn.addEventListener('click', () => this.generateNewComic());
-        this.prevBtn.addEventListener('click', () => this.navigatePrevious());
-        this.nextBtn.addEventListener('click', () => this.navigateNext());
+        this.nextBtn.addEventListener('click', () => this.handleNextAction());
         
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' && !this.prevBtn.disabled) {
-                this.navigatePrevious();
-            } else if (e.key === 'ArrowRight' && !this.nextBtn.disabled) {
-                this.navigateNext();
+            if (e.key === 'ArrowRight' && !this.nextBtn.disabled) {
+                this.handleNextAction();
             }
         });
+    }
+
+    // Handle next button action - generates or navigates based on current state
+    async handleNextAction() {
+        // If no comics are displayed, generate a new one
+        if (this.comicHistory.length === 0 || this.currentIndex === -1) {
+            await this.generateNewComic();
+            return;
+        }
+
+        // If a comic is displayed, check if user has provided feedback
+        const currentComic = this.getCurrentComic();
+        if (currentComic && !this.hasUserProvidedFeedback(currentComic.id)) {
+            this.showFeedbackRequiredMessage();
+            return;
+        }
+
+        // User has provided feedback, proceed to next comic
+        await this.navigateNext();
+    }
+
+    // Check if user has provided feedback for a comic (requires 3+ reactions)
+    hasUserProvidedFeedback(comicId) {
+        // Check with the feedback system if 3+ feedback reactions have been submitted
+        const feedbackSet = feedbackSystem.selectedFeedback && feedbackSystem.selectedFeedback.get(comicId);
+        return feedbackSet && feedbackSet.size >= 3;
+    }
+
+    // Show message that feedback is required
+    showFeedbackRequiredMessage() {
+        // You could show a toast or highlight the feedback section
+        // For now, let's scroll to feedback section and add a visual cue
+        const feedbackSection = document.getElementById('feedbackSection');
+        if (feedbackSection) {
+            feedbackSection.scrollIntoView({ behavior: 'smooth' });
+            feedbackSection.classList.add('feedback-required');
+            
+            // Remove the highlight after 3 seconds
+            setTimeout(() => {
+                feedbackSection.classList.remove('feedback-required');
+            }, 3000);
+        }
+        
+        console.log('Please select at least 3 reactions before proceeding to the next comic');
     }
 
     // Generate a new comic
@@ -113,14 +150,14 @@ class ComicApp {
         // Store current comic for feedback system
         this.currentComic = comic;
         
+        // Mark comic as seen
+        this.markComicAsSeen(comic.id);
+        
         // Render the comic
         comicRenderer.render(comic);
         
         // Show feedback section
         feedbackSystem.show(comic.id);
-        
-        // Update counter
-        this.updateCounter();
     }
     
     // Get current comic data (for feedback system)
@@ -128,39 +165,37 @@ class ComicApp {
         return this.currentComic || null;
     }
 
-    // Navigate to previous comic
-    navigatePrevious() {
-        if (this.currentIndex > 0) {
-            this.currentIndex--;
-            const comic = this.comicHistory[this.currentIndex];
-            this.displayComic(comic);
-            this.updateNavigation();
-        }
-    }
-
     // Navigate to next comic
-    navigateNext() {
-        if (this.currentIndex < this.comicHistory.length - 1) {
-            this.currentIndex++;
+    async navigateNext() {
+        // Remove the current comic since user is navigating away (it's been seen)
+        const currentComicId = this.comicHistory[this.currentIndex]?.id;
+        if (currentComicId && this.hasSeenComic(currentComicId)) {
+            this.removeComicFromHistoryById(currentComicId);
+        }
+        
+        // After removing current comic, check if we have more comics
+        if (this.comicHistory.length > 0 && this.currentIndex < this.comicHistory.length) {
+            // Display the next comic (which is now at the current index due to removal)
             const comic = this.comicHistory[this.currentIndex];
             this.displayComic(comic);
-            this.updateNavigation();
+        } else {
+            // No more comics in current batch, try to load more or generate new one
+            await this.loadMoreUnseenComics();
         }
+        
+        this.updateNavigation();
     }
 
     // Update navigation buttons
     updateNavigation() {
-        this.prevBtn.disabled = this.currentIndex <= 0;
-        this.nextBtn.disabled = this.currentIndex >= this.comicHistory.length - 1;
-        this.updateCounter();
-    }
-
-    // Update comic counter
-    updateCounter() {
-        if (this.comicHistory.length === 0) {
-            this.comicCounter.textContent = '0 / 0';
+        // Next button is always enabled (it either generates new comic or navigates)
+        this.nextBtn.disabled = false;
+        
+        // Update button text based on state
+        if (this.comicHistory.length === 0 || this.currentIndex === -1) {
+            this.nextBtn.innerHTML = '✨ Generate Comic <span class="btn-icon">→</span>';
         } else {
-            this.comicCounter.textContent = `${this.currentIndex + 1} / ${this.comicHistory.length}`;
+            this.nextBtn.innerHTML = 'Next <span class="btn-icon">→</span>';
         }
     }
 
@@ -214,13 +249,21 @@ class ComicApp {
         try {
             console.log('Loading history from local storage...');
             const stored = localStorage.getItem(CONFIG.STORAGE_KEYS.COMIC_HISTORY);
+            
             if (!stored) {
-                console.log('No comic history found in local storage');
+                console.log('No comic history found in local storage - loading recent comics for new user');
+                await this.loadRecentComicsForNewUser();
                 return;
             }
             
             const { history, currentIndex } = JSON.parse(stored);
             console.log(`Found ${history.length} comics in history`);
+            
+            if (history.length === 0) {
+                console.log('Empty comic history - loading recent comics for new user');
+                await this.loadRecentComicsForNewUser();
+                return;
+            }
             
             // Check if we're using the production or local API
             if (CONFIG.API_BASE_URL.includes('api.nrrds.com')) {
@@ -248,28 +291,77 @@ class ComicApp {
             
             const loadedComics = await Promise.all(loadPromises);
             const validComics = loadedComics.filter(comic => comic !== null);
-            console.log(`Successfully loaded ${validComics.length} comics`);
+            console.log(`Successfully loaded ${validComics.length} comics from localStorage`);
             
-            if (validComics.length > 0) {
-                this.comicHistory = validComics;
-                this.currentIndex = Math.min(currentIndex, this.comicHistory.length - 1);
+            // Filter out comics that have already been seen
+            const unseenValidComics = this.filterUnseenComics(validComics);
+            console.log(`Found ${unseenValidComics.length} unseen comics out of ${validComics.length} loaded comics`);
+            
+            if (unseenValidComics.length > 0) {
+                this.comicHistory = unseenValidComics;
+                this.currentIndex = 0; // Start with the first unseen comic
                 
-                // Display the last viewed comic
-                if (this.currentIndex >= 0 && this.currentIndex < this.comicHistory.length) {
-                    this.displayComic(this.comicHistory[this.currentIndex]);
-                }
-                
+                // Display the first unseen comic
+                this.displayComic(this.comicHistory[this.currentIndex]);
                 this.updateNavigation();
-            } else {
-                console.log('No valid comics were loaded from history');
-                // Clear invalid history to prevent repeated errors
-                this.comicHistory = [];
-                this.currentIndex = -1;
+                
+                // Update localStorage to only contain unseen comics
                 this.saveHistoryToStorage();
-                console.log('Comic history was reset due to loading failures');
+            } else {
+                console.log('All loaded comics have been seen - falling back to recent comics');
+                await this.loadRecentComicsForNewUser();
             }
         } catch (error) {
             console.error('Failed to load history:', error);
+            // Fallback to recent comics on any error
+            await this.loadRecentComicsForNewUser();
+        }
+    }
+
+    // Load recent comics for new users
+    async loadRecentComicsForNewUser() {
+        try {
+            console.log('Fetching recent comics from server for new user...');
+            // Fetch more comics than needed to account for filtering
+            const recentComics = await comicAPI.getRecentComics(20);
+            
+            if (recentComics.length > 0) {
+                console.log(`Fetched ${recentComics.length} recent comics from server`);
+                
+                // Filter out comics the user has already seen
+                const unseenComics = this.filterUnseenComics(recentComics);
+                console.log(`Found ${unseenComics.length} unseen comics out of ${recentComics.length} total`);
+                
+                if (unseenComics.length > 0) {
+                    // Take up to 5 unseen comics
+                    this.comicHistory = unseenComics.slice(0, 5);
+                    this.currentIndex = 0; // Start with the most recent unseen comic
+                    
+                    console.log(`Loaded ${this.comicHistory.length} unseen comics for user`);
+                    
+                    // Display the first (most recent unseen) comic
+                    this.displayComic(this.comicHistory[this.currentIndex]);
+                    this.updateNavigation();
+                    
+                    // Save to localStorage for future sessions
+                    this.saveHistoryToStorage();
+                } else {
+                    console.log('All recent comics have been seen by this user');
+                    this.comicHistory = [];
+                    this.currentIndex = -1;
+                    this.updateNavigation();
+                }
+            } else {
+                console.log('No recent comics available on server');
+                this.comicHistory = [];
+                this.currentIndex = -1;
+                this.updateNavigation();
+            }
+        } catch (error) {
+            console.error('Failed to load recent comics for new user:', error);
+            this.comicHistory = [];
+            this.currentIndex = -1;
+            this.updateNavigation();
         }
     }
 
@@ -282,6 +374,137 @@ class ComicApp {
             this.saveHistoryToStorage();
         } catch (error) {
             console.error('Failed to clear old history:', error);
+        }
+    }
+
+    // Seen comics tracking functions
+    getSeenComics() {
+        try {
+            const seen = localStorage.getItem(CONFIG.STORAGE_KEYS.SEEN_COMICS);
+            return seen ? JSON.parse(seen) : [];
+        } catch (error) {
+            console.error('Failed to get seen comics:', error);
+            return [];
+        }
+    }
+
+    markComicAsSeen(comicId) {
+        try {
+            const seenComics = this.getSeenComics();
+            if (!seenComics.includes(comicId)) {
+                seenComics.push(comicId);
+                // Keep only the last 1000 seen comics to prevent localStorage bloat
+                if (seenComics.length > 1000) {
+                    seenComics.shift();
+                }
+                localStorage.setItem(CONFIG.STORAGE_KEYS.SEEN_COMICS, JSON.stringify(seenComics));
+                console.log(`Marked comic ${comicId} as seen`);
+            }
+        } catch (error) {
+            console.error('Failed to mark comic as seen:', error);
+        }
+    }
+
+    hasSeenComic(comicId) {
+        const seenComics = this.getSeenComics();
+        return seenComics.includes(comicId);
+    }
+
+    filterUnseenComics(comics) {
+        return comics.filter(comic => !this.hasSeenComic(comic.id));
+    }
+
+    // Remove a specific comic from history by ID
+    removeComicFromHistoryById(comicId) {
+        const index = this.comicHistory.findIndex(comic => comic.id === comicId);
+        if (index !== -1) {
+            console.log(`Removing read comic ${comicId} from history`);
+            this.comicHistory.splice(index, 1);
+            
+            // Adjust currentIndex if necessary
+            if (index <= this.currentIndex) {
+                this.currentIndex = Math.max(0, this.currentIndex - 1);
+            }
+            
+            // If no more comics, try to load more
+            if (this.comicHistory.length === 0) {
+                this.currentIndex = -1;
+                this.loadMoreUnseenComics();
+            }
+            
+            // Update storage
+            this.saveHistoryToStorage();
+        }
+    }
+
+    // Remove the current comic from history after it's been read
+    removeCurrentComicFromHistory() {
+        if (this.comicHistory.length > 0 && this.currentIndex >= 0) {
+            const removedComic = this.comicHistory[this.currentIndex];
+            this.removeComicFromHistoryById(removedComic.id);
+            
+            // If we still have comics and need to display one
+            if (this.comicHistory.length > 0) {
+                if (this.currentIndex >= this.comicHistory.length) {
+                    this.currentIndex = this.comicHistory.length - 1;
+                }
+                if (this.currentIndex >= 0) {
+                    this.displayComic(this.comicHistory[this.currentIndex]);
+                }
+            }
+            
+            this.updateNavigation();
+        }
+    }
+
+    // Load more unseen comics when current ones are exhausted
+    async loadMoreUnseenComics() {
+        try {
+            console.log('All current comics have been read, loading more unseen comics...');
+            const recentComics = await comicAPI.getRecentComics(20);
+            const unseenComics = this.filterUnseenComics(recentComics);
+            
+            if (unseenComics.length > 0) {
+                console.log(`Found ${unseenComics.length} more unseen comics`);
+                this.comicHistory = unseenComics.slice(0, 5);
+                this.currentIndex = 0;
+                this.displayComic(this.comicHistory[this.currentIndex]);
+                this.updateNavigation();
+                this.saveHistoryToStorage();
+            } else {
+                console.log('No more unseen comics available - user can generate new ones');
+                this.showAllComicsReadMessage();
+            }
+        } catch (error) {
+            console.error('Failed to load more unseen comics:', error);
+            this.showAllComicsReadMessage();
+        }
+    }
+
+    // Show message when all comics have been read
+    showAllComicsReadMessage() {
+        console.log('User has read all available comics - they can now generate new ones');
+        this.comicHistory = [];
+        this.currentIndex = -1;
+        this.updateNavigation(); // This will change button to "Generate Comic"
+        
+        // Hide any existing comic and show welcome message
+        const comicContainer = document.getElementById('comicContainer');
+        if (comicContainer) {
+            comicContainer.innerHTML = `
+                <div class="welcome-message">
+                    <div class="welcome-icon">🎉</div>
+                    <h2>All caught up!</h2>
+                    <p>You've read all available comics.</p>
+                    <p>Click "Generate Comic" to create a new one!</p>
+                </div>
+            `;
+        }
+        
+        // Hide feedback section
+        const feedbackSection = document.getElementById('feedbackSection');
+        if (feedbackSection) {
+            feedbackSection.style.display = 'none';
         }
     }
 }

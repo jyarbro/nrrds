@@ -6,7 +6,7 @@ export default class FeedbackSystem {
     constructor() {
         this.feedbackSection = document.getElementById('feedbackSection');
         this.feedbackStats = document.getElementById('feedbackStats');
-        this.selectedFeedback = new Map(); // Track feedback per comic
+        this.selectedFeedback = new Map(); // Track multiple feedback per comic (comic ID -> Set of feedback types)
         this.isSubmitting = false; // Prevent multiple simultaneous submissions
         this.initializeEventListeners();
     }
@@ -27,12 +27,20 @@ export default class FeedbackSystem {
         // Reset button states
         this.resetButtonStates();
         
-        // Restore previous selection if exists
-        const previousFeedback = this.selectedFeedback.get(comicId);
-        if (previousFeedback) {
-            const btn = document.querySelector(`[data-feedback="${previousFeedback}"]`);
-            if (btn) {
-                btn.classList.add('selected');
+        // Restore previous selections if they exist
+        const previousFeedbackSet = this.selectedFeedback.get(comicId);
+        if (previousFeedbackSet && previousFeedbackSet.size > 0) {
+            previousFeedbackSet.forEach(feedbackType => {
+                const btn = document.querySelector(`[data-feedback="${feedbackType}"]`);
+                if (btn) {
+                    btn.classList.add('selected');
+                }
+            });
+            
+            // If 3+ reactions selected, disable all buttons and show summary
+            if (previousFeedbackSet.size >= 3) {
+                this.disableReactionButtons();
+                this.showReactionSummary(comicId, previousFeedbackSet);
             }
         }
 
@@ -73,20 +81,43 @@ export default class FeedbackSystem {
         // Set submitting flag
         this.isSubmitting = true;
 
-        // Visual feedback
-        this.resetButtonStates();
-        btn.classList.add('selected');
+        // Get current selections for this comic
+        let feedbackSet = this.selectedFeedback.get(this.currentComicId) || new Set();
         
-        // Animate the selection
-        btn.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-            btn.style.transform = '';
-        }, 100);
+        // Toggle selection
+        if (feedbackSet.has(feedbackType)) {
+            // Remove if already selected
+            feedbackSet.delete(feedbackType);
+            btn.classList.remove('selected');
+        } else {
+            // Add if not selected and less than 3 total
+            if (feedbackSet.size < 3) {
+                feedbackSet.add(feedbackType);
+                btn.classList.add('selected');
+                
+                // Animate the selection
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    btn.style.transform = '';
+                }, 100);
+            } else {
+                // Already have 3 selections, don't allow more
+                console.log('Maximum 3 reactions allowed');
+                this.isSubmitting = false;
+                return;
+            }
+        }
+        
+        // Store updated selections
+        this.selectedFeedback.set(this.currentComicId, feedbackSet);
+        
+        // If we now have 3+ selections, disable buttons and show summary
+        if (feedbackSet.size >= 3) {
+            this.disableReactionButtons();
+            this.showReactionSummary(this.currentComicId, feedbackSet);
+        }
 
-        // Store selection
-        this.selectedFeedback.set(this.currentComicId, feedbackType);
-
-        // Submit feedback to backend
+        // Submit feedback to backend (submit each reaction individually)
         try {
             // Get current comic data for token extraction
             const currentComic = this.getCurrentComic();
@@ -430,6 +461,65 @@ export default class FeedbackSystem {
             console.error('Failed to get user preferences:', error);
             return {};
         }
+    }
+
+    // Disable all reaction buttons when 3+ selections made
+    disableReactionButtons() {
+        document.querySelectorAll('.emoji-btn').forEach(btn => {
+            if (!btn.classList.contains('selected')) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        });
+    }
+
+    // Enable all reaction buttons
+    enableReactionButtons() {
+        document.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        });
+    }
+
+    // Show reaction summary when 3+ reactions selected
+    showReactionSummary(comicId, feedbackSet) {
+        if (!this.feedbackStats) return;
+        
+        const selectedReactions = Array.from(feedbackSet).map(feedbackType => {
+            const config = CONFIG.FEEDBACK_TYPES[feedbackType];
+            return {
+                type: feedbackType,
+                emoji: config?.emoji || '❓',
+                phrase: config?.phrase || feedbackType
+            };
+        });
+
+        this.feedbackStats.innerHTML = `
+            <div class="reaction-summary">
+                <h4>Your reactions:</h4>
+                <div class="selected-reactions">
+                    ${selectedReactions.map(reaction => `
+                        <div class="selected-reaction">
+                            <span class="reaction-emoji">${reaction.emoji}</span>
+                            <span class="reaction-phrase">You ${reaction.phrase}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <p class="reaction-note">Perfect! You can now proceed to the next comic.</p>
+            </div>
+        `;
+    }
+
+    // Override resetButtonStates to handle multiple selections
+    resetButtonStates() {
+        document.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.classList.remove('selected');
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        });
     }
 }
 
