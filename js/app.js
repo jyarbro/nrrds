@@ -171,42 +171,24 @@ class ComicApp {
                 this.generateBtn.style.display = 'inline-flex';
             }
             if (this.nextBtn) {
-                this.nextBtn.style.display = 'none';
+                this.nextBtn.disabled = true;
             }
             if (this.previousBtn) {
-                this.previousBtn.style.display = 'none';
-            }
-            if (this.controlsSection) {
-                this.controlsSection.classList.add('hidden');
+                this.previousBtn.disabled = true;
             }
         } else {
             if (this.generateBtn) {
                 this.generateBtn.style.display = 'none';
             }
-            if (this.controlsSection) {
-                this.controlsSection.classList.remove('hidden');
+            
+            // Update previous button
+            if (this.previousBtn) {
+                this.previousBtn.disabled = this.currentIndex <= 0;
             }
-            if (this.currentIndex > 0) {
-                if (this.previousBtn) {
-                    this.previousBtn.style.display = 'inline-flex';
-                    this.previousBtn.disabled = false;
-                }
-            } else {
-                if (this.previousBtn) {
-                    this.previousBtn.style.display = 'none';
-                    this.previousBtn.disabled = true;
-                }
-            }
-            if (this.currentIndex < this.comics.length - 1) {
-                if (this.nextBtn) {
-                    this.nextBtn.style.display = 'inline-flex';
-                    this.nextBtn.disabled = false;
-                }
-            } else {
-                if (this.nextBtn) {
-                    this.nextBtn.style.display = 'none';
-                    this.nextBtn.disabled = true;
-                }
+            
+            // Update next button
+            if (this.nextBtn) {
+                this.nextBtn.disabled = this.currentIndex >= this.comics.length - 1;
             }
         }
     }

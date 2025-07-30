@@ -32,7 +32,6 @@ class ComicAPI {
         try {
             const isDev = window.location.hostname === 'localhost';
             const url = isDev ? `/api/${endpoint}` : `${this.baseURL}/api/${endpoint}`;
-            console.log('Fetching URL:', url);
             const fetchOptions = {
                 ...options,
                 credentials: isDev ? 'omit' : 'include',
@@ -42,9 +41,7 @@ class ComicAPI {
                     ...options.headers
                 }
             };
-            console.log('Fetch options:', fetchOptions);
             const response = await fetch(url, fetchOptions);
-            console.log('Response status:', response.status, response.statusText);
             if (!response.ok) {
                 let errorDetails = {};
                 try {
@@ -121,13 +118,10 @@ class ComicAPI {
      */
     async submitFeedback(comicId, feedbackType, additionalData = {}) {
         try {
-            console.log('Available feedback types:', Object.keys(CONFIG.FEEDBACK_TYPES));
-            console.log('Requested feedback type:', feedbackType);
             const feedbackData = CONFIG.FEEDBACK_TYPES[feedbackType];
             if (!feedbackData) {
                 throw new Error(`Invalid feedback type: ${feedbackType}. Available: ${Object.keys(CONFIG.FEEDBACK_TYPES).join(', ')}`);
             }
-            console.log('Submitting feedback to API...');
             const requestData = {
                 comicId,
                 userId: this.userId,
@@ -137,14 +131,11 @@ class ComicAPI {
                 timestamp: new Date().toISOString(),
                 ...additionalData
             };
-            console.log('Request data:', requestData);
             
             const data = await this.fetchAPI('submit-feedback', {
                 method: 'POST',
                 body: JSON.stringify(requestData)
             });
-            
-            console.log('Response data:', data);
             if (!data.success) {
                 throw new Error(data.error || CONFIG.ERRORS.FEEDBACK_FAILED);
             }
@@ -162,13 +153,10 @@ class ComicAPI {
      */
     async getFeedbackStats(comicId) {
         try {
-            console.log('🔍 Fetching feedback stats for:', comicId);
             const data = await this.fetchAPI(`get-feedback?comicId=${comicId}`);
-            console.log('🔍 Feedback response:', data);
             if (!data.success) {
                 throw new Error(data.error || 'Failed to get feedback');
             }
-            console.log('🔍 Returning stats:', data.stats);
             return data.stats || {};
         } catch (error) {
             console.error('🔍 Feedback stats error:', error);

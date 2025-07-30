@@ -110,7 +110,6 @@ export default class FeedbackSystem {
                 this.submitFeedbackImmediately(feedbackType, btn, false); // false = increment
             } else {
                 // Already have 3 selections, don't allow more
-                console.log('Maximum 3 reactions allowed');
                 return;
             }
         }
@@ -209,7 +208,6 @@ export default class FeedbackSystem {
         );
         
         if (isDuplicate) {
-            console.log(`Skipping duplicate submission for ${feedbackType} (${isDecrement ? 'decrement' : 'increment'})`);
             return;
         }
         
@@ -251,9 +249,7 @@ export default class FeedbackSystem {
                     semanticConcepts: currentComic?.concepts || [],
                     action: submission.isDecrement ? 'decrement' : 'increment'
                 });
-                console.log(`Successfully submitted feedback: ${submission.feedbackType} (${submission.isDecrement ? 'decrement' : 'increment'})`);
             } catch (error) {
-                console.log(`Failed to submit feedback: ${submission.feedbackType}`, error);
                 // Don't retry, just continue with next item
             }
         }
@@ -267,9 +263,7 @@ export default class FeedbackSystem {
     // Load and display feedback statistics
     async loadFeedbackStats(comicId) {
         try {
-            console.log('📊 Loading feedback stats for comic:', comicId);
             const stats = await comicAPI.getFeedbackStats(comicId);
-            console.log('📊 Received stats:', stats);
             this.displayStats(stats);
         } catch (error) {
             console.error('Failed to load feedback stats:', error);
