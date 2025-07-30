@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>nrrds//A Generated Comic</title>
+    <title>nrrds // a Generated Comic</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,15 +12,7 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <div class="nav-arrows">
-                <button class="control-btn secondary-btn" id="previousBtn" style="display: none;">
-                    ←
-                </button>
-                <h1 class="app-title">nrrds</h1>
-                <button class="control-btn secondary-btn" id="nextBtn" style="display: none;">
-                    →
-                </button>
-            </div>
+            <h1 class="app-title">nrrds // a generated comic</h1>
         </header>
         <main class="main-content active" id="homePage">
             <div class="comic-container" id="comicContainer">
@@ -34,8 +26,20 @@
                     </button>
                 </div>
             </div>
+        </main>
 
-            <div class="feedback-section" id="feedbackSection" style="display: none;">
+        <div class="nav-arrows">
+            <button class="nav-btn nav-btn-prev" id="previousBtn" disabled>
+                <span class="nav-arrow">◀</span>
+                <span class="nav-label">BACK</span>
+            </button>
+            <button class="nav-btn nav-btn-next" id="nextBtn" disabled>
+                <span class="nav-label">NEXT</span>
+                <span class="nav-arrow">▶</span>
+            </button>
+        </div>
+
+        <div class="feedback-section" id="feedbackSection" style="display: none;">
                 <h3 class="feedback-title">What's your reaction?</h3>
                 <div class="emoji-feedback-grid">
                     <button class="emoji-btn" data-feedback="love" data-phrase="felt love or adoration">
