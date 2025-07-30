@@ -33,37 +33,35 @@ export const CONFIG = {
     // Feedback settings
     FEEDBACK_TYPES: {
         // Most positive (weight 2.0 - 1.5)
-        love: { emoji: '💖', phrase: 'felt love or adoration', weight: 2.0 },
-        wholesome: { emoji: '🥰', phrase: 'thought it was wholesome', weight: 1.8 },
-        uplifted: { emoji: '🕊️', phrase: 'felt uplifted', weight: 1.7 },
-        thumbsup: { emoji: '👍', phrase: 'gave it a thumbs up', weight: 1.6 },
-        amused: { emoji: '😂', phrase: 'was amused or laughed', weight: 1.5 },
+        thumbsup: { emoji: '👍', weight: 2.0 },
+        lol: { emoji: '😂', weight: 1.9 },
+        heartwarming: { emoji: '🫶', weight: 1.8 },
+        awesome: { emoji: '🤩', weight: 1.7 },
+        inspired: { emoji: '💡', weight: 1.6 },
+        unique: { emoji: '🦄', weight: 1.5 },
         
         // Positive (weight 1.4 - 1.0)
-        inspired: { emoji: '💡', phrase: 'felt inspired', weight: 1.4 },
-        clever: { emoji: '🧠', phrase: 'thought it was clever or smart', weight: 1.3 },
-        heroic: { emoji: '🦸', phrase: 'felt heroic or empowered', weight: 1.2 },
-        unique: { emoji: '🦄', phrase: 'thought it was unique or weird', weight: 1.1 },
-        relatable: { emoji: '🫂', phrase: 'found it relatable', weight: 1.0 },
+        mindblown: { emoji: '🤯', weight: 1.4 },
+        celebrating: { emoji: '🥳', weight: 1.3 },
+        deep: { emoji: '🤔', weight: 1.2 },
+        relatable: { emoji: '🙋', weight: 1.1 },
         
-        // Mildly positive (weight 0.8 - 0.2)
-        mindblown: { emoji: '🤯', phrase: 'mind blown', weight: 0.8 },
-        surprised: { emoji: '😱', phrase: 'was surprised or shocked', weight: 0.5 },
+        // Neutral (weight 1.0 to -0.5)
+        confused: { emoji: '😕', weight: 0.2 },
+        meh: { emoji: '😐', weight: 0 },
+        sad: { emoji: '😢', weight: -0.3 },
+        spooked: { emoji: '😱', weight: -0.5 },
         
-        // Neutral (weight 0 to -0.2)
-        confused: { emoji: '🌀', phrase: 'felt confused', weight: -0.2 },
-        meh: { emoji: '😐', phrase: 'felt neutral or meh', weight: 0 },
+        // Negative (weight -0.8 to -1.5)
+        grossedout: { emoji: '🤢', weight: -0.8 },
+        cringe: { emoji: '😬', weight: -1.0 },
+        angry: { emoji: '😠', weight: -1.2 },
+        facepalm: { emoji: '🤦', weight: -1.3 },
+        eyeroll: { emoji: '🙄', weight: -1.4 },
+        skeptical: { emoji: '🧐', weight: -1.5 },
         
-        // Negative (weight -0.5 to -1.0)
-        bored: { emoji: '😴', phrase: 'felt bored', weight: -0.8 },
-        cringe: { emoji: '😬', phrase: 'felt cringe', weight: -1.0 },
-        
-        // Very negative (weight -1.2 to -2.0)
-        sad: { emoji: '😢', phrase: 'felt sad', weight: -1.2 },
-        scared: { emoji: '👻', phrase: 'felt scared', weight: -1.4 },
-        disgusted: { emoji: '🤢', phrase: 'felt disgusted', weight: -1.6 },
-        angry: { emoji: '😡', phrase: 'felt angry', weight: -1.8 },
-        offended: { emoji: '🚫', phrase: 'felt offended', weight: -2.0 }
+        // Most negative (weight -1.8 to -2.0)
+        offended: { emoji: '🚫', weight: -2.0 }
     },
     
     // Token system for AI feedback (dual-layer approach)
