@@ -7,7 +7,8 @@ export default class FeedbackSystem {
         this.feedbackSection = document.getElementById('feedbackSection');
         this.feedbackStats = document.getElementById('feedbackStats');
         this.selectedFeedback = new Map(); // Track multiple feedback per comic (comic ID -> Set of feedback types)
-        this.isSubmitting = false; // Prevent multiple simultaneous submissions
+        this.submissionQueue = []; // Queue for API submissions
+        this.isProcessingQueue = false; // Flag to prevent multiple queue processors
         this.initializeEventListeners();
     }
 
@@ -37,10 +38,9 @@ export default class FeedbackSystem {
                 }
             });
             
-            // If 3+ reactions selected, disable all buttons and show summary
+            // If 3+ reactions selected, disable unselected buttons
             if (previousFeedbackSet.size >= 3) {
-                this.disableReactionButtons();
-                this.showReactionSummary(comicId, previousFeedbackSet);
+                this.disableUnselectedButtons();
             }
         }
 
@@ -56,31 +56,17 @@ export default class FeedbackSystem {
 
     // Handle feedback button click
     async handleFeedbackClick(event) {
-        // Prevent event bubbling and multiple submissions
+        // Prevent event bubbling
         event.preventDefault();
         event.stopPropagation();
-        
-        console.log('🔥 handleFeedbackClick called');
-        
-        // Prevent multiple simultaneous submissions
-        if (this.isSubmitting) {
-            console.log('❌ Already submitting, ignoring click');
-            return;
-        }
         
         const btn = event.currentTarget;
         const feedbackType = btn.getAttribute('data-feedback');
         
-        console.log('📝 Feedback type:', feedbackType);
-        
         if (!this.currentComicId || !feedbackType) {
-            console.log('❌ Missing comicId or feedbackType');
             return;
         }
         
-        // Set submitting flag
-        this.isSubmitting = true;
-
         // Get current selections for this comic
         let feedbackSet = this.selectedFeedback.get(this.currentComicId) || new Set();
         
@@ -89,6 +75,12 @@ export default class FeedbackSystem {
             // Remove if already selected
             feedbackSet.delete(feedbackType);
             btn.classList.remove('selected');
+            
+            // Re-enable other buttons if we're now under 3
+            if (feedbackSet.size < 3) {
+                this.enableReactionButtons();
+            }
+            
         } else {
             // Add if not selected and less than 3 total
             if (feedbackSet.size < 3) {
@@ -100,10 +92,14 @@ export default class FeedbackSystem {
                 setTimeout(() => {
                     btn.style.transform = '';
                 }, 100);
+                
+                // If we now have 3 selections, disable other buttons
+                if (feedbackSet.size >= 3) {
+                    this.disableUnselectedButtons();
+                }
             } else {
                 // Already have 3 selections, don't allow more
                 console.log('Maximum 3 reactions allowed');
-                this.isSubmitting = false;
                 return;
             }
         }
@@ -111,52 +107,8 @@ export default class FeedbackSystem {
         // Store updated selections
         this.selectedFeedback.set(this.currentComicId, feedbackSet);
         
-        // If we now have 3+ selections, disable buttons and show summary
-        if (feedbackSet.size >= 3) {
-            this.disableReactionButtons();
-            this.showReactionSummary(this.currentComicId, feedbackSet);
-        }
-
-        // Submit feedback to backend (submit each reaction individually)
-        try {
-            // Get current comic data for token extraction
-            const currentComic = this.getCurrentComic();
-            console.log('Submitting feedback:', {
-                comicId: this.currentComicId,
-                feedbackType,
-                currentComic,
-                tokens: currentComic?.tokens || [],
-                concepts: currentComic?.concepts || []
-            });
-            
-            await comicAPI.submitFeedback(this.currentComicId, feedbackType, {
-                comicTokens: currentComic?.tokens || [],
-                semanticConcepts: currentComic?.concepts || []
-            });
-            
-            // Show success animation
-            this.showFeedbackSuccess(btn);
-            
-            // Update stats
-            this.loadFeedbackStats(this.currentComicId);
-            
-            // Store in local preferences for AI training
-            this.updateLocalPreferences(feedbackType, currentComic);
-            
-        } catch (error) {
-            console.error('Failed to submit feedback:', error);
-            
-            // Check if it's a rate limiting error
-            if (error.message && error.message.includes('can only submit')) {
-                this.showRateLimitError(error.message);
-            } else {
-                this.showFeedbackError();
-            }
-        } finally {
-            // Reset submitting flag
-            this.isSubmitting = false;
-            console.log('✅ Submission completed, flag reset');
-        }
+        // Submit feedback immediately (async, no waiting)
+        this.submitFeedbackImmediately(feedbackType, btn);
     }
 
     // Reset all button states
@@ -226,12 +178,82 @@ export default class FeedbackSystem {
             padding: 12px 24px;
             border-radius: 25px;
             animation: slideUp 0.3s ease-out;
-            max-width: 300px;
+            max-width: 350px;
             text-align: center;
+            z-index: 10000;
         `;
         
         document.body.appendChild(errorMsg);
         setTimeout(() => errorMsg.remove(), 5000); // Show longer for rate limit
+    }
+    
+    // Queue feedback for submission to avoid rate limits
+    submitFeedbackImmediately(feedbackType, btn) {
+        // Check if this exact submission is already in the queue
+        const submissionKey = `${this.currentComicId}-${feedbackType}`;
+        const isDuplicate = this.submissionQueue.some(item => 
+            item.comicId === this.currentComicId && item.feedbackType === feedbackType
+        );
+        
+        if (isDuplicate) {
+            console.log(`Skipping duplicate submission for ${feedbackType}`);
+            return;
+        }
+        
+        // Add to queue
+        this.submissionQueue.push({
+            comicId: this.currentComicId,
+            feedbackType: feedbackType,
+            button: btn,
+            timestamp: Date.now()
+        });
+        
+        // Update local preferences immediately
+        const currentComic = this.getCurrentComic();
+        this.updateLocalPreferences(feedbackType, currentComic);
+        
+        // Show success animation immediately (local state is what matters)
+        this.showFeedbackSuccess(btn);
+        
+        // Process the queue
+        this.processSubmissionQueue();
+    }
+    
+    // Process the submission queue with proper spacing
+    async processSubmissionQueue() {
+        if (this.isProcessingQueue || this.submissionQueue.length === 0) {
+            return;
+        }
+        
+        this.isProcessingQueue = true;
+        
+        while (this.submissionQueue.length > 0) {
+            const submission = this.submissionQueue.shift();
+            
+            try {
+                const currentComic = this.getCurrentComic();
+                
+                await comicAPI.submitFeedback(submission.comicId, submission.feedbackType, {
+                    comicTokens: currentComic?.tokens || [],
+                    semanticConcepts: currentComic?.concepts || []
+                });
+                
+                console.log(`Successfully submitted feedback: ${submission.feedbackType}`);
+                
+            } catch (error) {
+                console.log(`Failed to submit feedback: ${submission.feedbackType}`, error);
+                // Don't retry, just continue with next item
+            }
+            
+            // No delays needed - submit immediately
+        }
+        
+        this.isProcessingQueue = false;
+        
+        // Update stats once after all submissions are done
+        if (this.currentComicId) {
+            this.loadFeedbackStats(this.currentComicId);
+        }
     }
 
     // Load and display feedback statistics
@@ -243,10 +265,11 @@ export default class FeedbackSystem {
             this.displayStats(stats);
         } catch (error) {
             console.error('Failed to load feedback stats:', error);
-            // Show fallback message
-            this.feedbackStats.innerHTML = '<p>Unable to load reaction stats.</p>';
+            // Show friendly fallback message
+            this.feedbackStats.innerHTML = '<p>Share your reactions!</p>';
         }
     }
+    
 
     // Display feedback statistics
     displayStats(stats) {
@@ -269,8 +292,8 @@ export default class FeedbackSystem {
         // Create stats display
         let statsHTML = ``;
         
-        // Show top reactions (exclude meta fields) sorted by feedback value (best to worst)
-        const topReactions = Object.entries(stats)
+        // Show all reactions (exclude meta fields) sorted by feedback value (best to worst)
+        const allReactions = Object.entries(stats)
             .filter(([key, value]) => !excludeFields.includes(key))
             .filter(([,count]) => count > 0)
             .sort(([typeA, countA], [typeB, countB]) => {
@@ -281,12 +304,11 @@ export default class FeedbackSystem {
                     return weightB - weightA; // Higher weight first
                 }
                 return countB - countA; // Higher count first if weights are equal
-            })
-            .slice(0, 3);
+            });
         
-        if (topReactions.length > 0) {
-            statsHTML += '<div class="top-reactions">';
-            topReactions.forEach(([type, count]) => {
+        if (allReactions.length > 0) {
+            statsHTML += '<div class="all-reactions">';
+            allReactions.forEach(([type, count]) => {
                 const feedbackData = CONFIG.FEEDBACK_TYPES[type];
                 if (feedbackData) {
                     const percentage = Math.round((count / totalFeedback) * 100);
@@ -322,9 +344,11 @@ export default class FeedbackSystem {
             // Increment feedback count
             prefs.feedbackCounts[feedbackType] = (prefs.feedbackCounts[feedbackType] || 0) + 1;
             
+            // Get feedback weight for this reaction type
+            const feedbackWeight = CONFIG.FEEDBACK_TYPES[feedbackType]?.weight || 0;
+            
             // Update token preferences based on comic content
             if (comic?.tokens) {
-                const feedbackWeight = CONFIG.FEEDBACK_TYPES[feedbackType].weight;
                 this.updateTokenPreferences(prefs, comic.tokens, feedbackWeight);
             }
             
@@ -463,8 +487,8 @@ export default class FeedbackSystem {
         }
     }
 
-    // Disable all reaction buttons when 3+ selections made
-    disableReactionButtons() {
+    // Disable only unselected reaction buttons when 3 selections made
+    disableUnselectedButtons() {
         document.querySelectorAll('.emoji-btn').forEach(btn => {
             if (!btn.classList.contains('selected')) {
                 btn.disabled = true;
@@ -483,34 +507,6 @@ export default class FeedbackSystem {
         });
     }
 
-    // Show reaction summary when 3+ reactions selected
-    showReactionSummary(comicId, feedbackSet) {
-        if (!this.feedbackStats) return;
-        
-        const selectedReactions = Array.from(feedbackSet).map(feedbackType => {
-            const config = CONFIG.FEEDBACK_TYPES[feedbackType];
-            return {
-                type: feedbackType,
-                emoji: config?.emoji || '❓',
-                phrase: config?.phrase || feedbackType
-            };
-        });
-
-        this.feedbackStats.innerHTML = `
-            <div class="reaction-summary">
-                <h4>Your reactions:</h4>
-                <div class="selected-reactions">
-                    ${selectedReactions.map(reaction => `
-                        <div class="selected-reaction">
-                            <span class="reaction-emoji">${reaction.emoji}</span>
-                            <span class="reaction-phrase">You ${reaction.phrase}</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <p class="reaction-note">Perfect! You can now proceed to the next comic.</p>
-            </div>
-        `;
-    }
 
     // Override resetButtonStates to handle multiple selections
     resetButtonStates() {
@@ -552,10 +548,11 @@ feedbackStyle.textContent = `
         }
     }
 
-    .top-reactions {
+    .all-reactions {
         display: flex;
         justify-content: center;
-        gap: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
         margin-top: 10px;
     }
 

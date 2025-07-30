@@ -23,7 +23,7 @@ export default class ComicRenderer {
             comicWrapper.appendChild(title);
         }
         const strip = document.createElement('div');
-        strip.className = 'comic-strip';
+        strip.className = `comic-strip panels-${comic.panels.length}`;
         comic.panels.forEach((panel, index) => {
             const panelElement = this.createPanel(panel, index);
             strip.appendChild(panelElement);

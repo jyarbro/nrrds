@@ -13,13 +13,17 @@
     <div class="app-container">
         <header class="app-header">
             <h1 class="app-title">nrrds</h1>
-            <p class="app-subtitle">A generated comic guided by your reaction!</p>
+            <nav class="app-nav">
+                <button class="nav-link active" id="homeTab">🏠</button>
+                <button class="nav-link" id="pastComicsTab">🔄</button>
+            </nav>
         </header>
 
-        <main class="main-content">
-            <div class="controls-section">
+        <!-- Home Page -->
+        <main class="main-content active" id="homePage">
+            <div class="controls-section hidden" id="controlsSection">
                 <div class="navigation-controls">
-                    <button class="control-btn primary-btn" id="nextBtn">
+                    <button class="control-btn secondary-btn" id="nextBtn" style="display: none;">
                         Next
                         <span class="btn-icon">→</span>
                     </button>
@@ -28,10 +32,13 @@
 
             <div class="comic-container" id="comicContainer">
                 <div class="welcome-message">
-                    <div class="welcome-icon">🎭</div>
+                    <div class="welcome-icon">🤓</div>
                     <h2>Welcome to nrrds!</h2>
                     <p>Generated comics will appear here.</p>
                     <p>Your reactions help train nrrds AI to create better comics!</p>
+                    <button class="control-btn primary-btn" id="generateBtn">
+                        ✨ Generate Comic
+                    </button>
                 </div>
             </div>
 
@@ -50,9 +57,9 @@
                         <span class="emoji">🕊️</span>
                         <span class="label">Uplifted</span>
                     </button>
-                    <button class="emoji-btn" data-feedback="applauding" data-phrase="wanted to applaud or was impressed">
-                        <span class="emoji">👏</span>
-                        <span class="label">Applauding</span>
+                    <button class="emoji-btn" data-feedback="thumbsup" data-phrase="gave it a thumbs up">
+                        <span class="emoji">👍</span>
+                        <span class="label">Thumbs Up</span>
                     </button>
                     <button class="emoji-btn" data-feedback="amused" data-phrase="was amused or laughed">
                         <span class="emoji">😂</span>
@@ -127,9 +134,12 @@
             </div>
         </main>
 
-        <footer class="app-footer">
-            <p>Powered by nrrds AI • Your reactions help improve future comics</p>
-        </footer>
+        <!-- Past Comics Page -->
+        <div id="pastComicsPage" class="page past-comics-page">
+            <div class="past-comics-container" id="pastComicsContainer">
+                <div class="loading-message">Loading your past comics...</div>
+            </div>
+        </div>
     </div>
 
     <!-- Loading overlay -->

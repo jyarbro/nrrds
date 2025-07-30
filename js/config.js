@@ -36,7 +36,7 @@ export const CONFIG = {
         love: { emoji: '💖', phrase: 'felt love or adoration', weight: 2.0 },
         wholesome: { emoji: '🥰', phrase: 'thought it was wholesome', weight: 1.8 },
         uplifted: { emoji: '🕊️', phrase: 'felt uplifted', weight: 1.7 },
-        applauding: { emoji: '👏', phrase: 'wanted to applaud or was impressed', weight: 1.6 },
+        thumbsup: { emoji: '👍', phrase: 'gave it a thumbs up', weight: 1.6 },
         amused: { emoji: '😂', phrase: 'was amused or laughed', weight: 1.5 },
         
         // Positive (weight 1.4 - 1.0)
