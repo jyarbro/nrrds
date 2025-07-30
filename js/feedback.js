@@ -24,12 +24,23 @@ export default class FeedbackSystem {
     show(comicId) {
         this.currentComicId = comicId;
         this.feedbackSection.style.display = 'block';
-        
-        // Reset button states
         this.resetButtonStates();
-        
-        // Restore previous selections if they exist
-        const previousFeedbackSet = this.selectedFeedback.get(comicId);
+
+        // Restore previous selections from localStorage if present
+        const localKey = `comic_feedback_${comicId}`;
+        let previousFeedbackSet;
+        try {
+            const stored = localStorage.getItem(localKey);
+            if (stored) {
+                previousFeedbackSet = new Set(JSON.parse(stored));
+                this.selectedFeedback.set(comicId, previousFeedbackSet);
+            } else {
+                previousFeedbackSet = this.selectedFeedback.get(comicId);
+            }
+        } catch (e) {
+            previousFeedbackSet = this.selectedFeedback.get(comicId);
+        }
+
         if (previousFeedbackSet && previousFeedbackSet.size > 0) {
             previousFeedbackSet.forEach(feedbackType => {
                 const btn = document.querySelector(`[data-feedback="${feedbackType}"]`);
@@ -37,14 +48,10 @@ export default class FeedbackSystem {
                     btn.classList.add('selected');
                 }
             });
-            
-            // If 3+ reactions selected, disable unselected buttons
             if (previousFeedbackSet.size >= 3) {
                 this.disableUnselectedButtons();
             }
         }
-
-        // Load and display stats
         this.loadFeedbackStats(comicId);
     }
 
@@ -69,9 +76,10 @@ export default class FeedbackSystem {
         
         // Get current selections for this comic
         let feedbackSet = this.selectedFeedback.get(this.currentComicId) || new Set();
+        let wasSelected = feedbackSet.has(feedbackType);
         
         // Toggle selection
-        if (feedbackSet.has(feedbackType)) {
+        if (wasSelected) {
             // Remove if already selected
             feedbackSet.delete(feedbackType);
             btn.classList.remove('selected');
@@ -80,7 +88,8 @@ export default class FeedbackSystem {
             if (feedbackSet.size < 3) {
                 this.enableReactionButtons();
             }
-            
+            // Submit decrement feedback
+            this.submitFeedbackImmediately(feedbackType, btn, true); // true = decrement
         } else {
             // Add if not selected and less than 3 total
             if (feedbackSet.size < 3) {
@@ -97,6 +106,8 @@ export default class FeedbackSystem {
                 if (feedbackSet.size >= 3) {
                     this.disableUnselectedButtons();
                 }
+                // Submit increment feedback
+                this.submitFeedbackImmediately(feedbackType, btn, false); // false = increment
             } else {
                 // Already have 3 selections, don't allow more
                 console.log('Maximum 3 reactions allowed');
@@ -106,9 +117,11 @@ export default class FeedbackSystem {
         
         // Store updated selections
         this.selectedFeedback.set(this.currentComicId, feedbackSet);
-        
-        // Submit feedback immediately (async, no waiting)
-        this.submitFeedbackImmediately(feedbackType, btn);
+        // Save to localStorage
+        try {
+            const localKey = `comic_feedback_${this.currentComicId}`;
+            localStorage.setItem(localKey, JSON.stringify(Array.from(feedbackSet)));
+        } catch (e) {}
     }
 
     // Reset all button states
@@ -188,15 +201,15 @@ export default class FeedbackSystem {
     }
     
     // Queue feedback for submission to avoid rate limits
-    submitFeedbackImmediately(feedbackType, btn) {
+    submitFeedbackImmediately(feedbackType, btn, isDecrement = false) {
         // Check if this exact submission is already in the queue
-        const submissionKey = `${this.currentComicId}-${feedbackType}`;
+        const submissionKey = `${this.currentComicId}-${feedbackType}-${isDecrement ? 'decrement' : 'increment'}`;
         const isDuplicate = this.submissionQueue.some(item => 
-            item.comicId === this.currentComicId && item.feedbackType === feedbackType
+            item.comicId === this.currentComicId && item.feedbackType === feedbackType && item.isDecrement === isDecrement
         );
         
         if (isDuplicate) {
-            console.log(`Skipping duplicate submission for ${feedbackType}`);
+            console.log(`Skipping duplicate submission for ${feedbackType} (${isDecrement ? 'decrement' : 'increment'})`);
             return;
         }
         
@@ -205,7 +218,8 @@ export default class FeedbackSystem {
             comicId: this.currentComicId,
             feedbackType: feedbackType,
             button: btn,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            isDecrement: isDecrement
         });
         
         // Update local preferences immediately
@@ -218,7 +232,7 @@ export default class FeedbackSystem {
         // Process the queue
         this.processSubmissionQueue();
     }
-    
+
     // Process the submission queue with proper spacing
     async processSubmissionQueue() {
         if (this.isProcessingQueue || this.submissionQueue.length === 0) {
@@ -229,27 +243,21 @@ export default class FeedbackSystem {
         
         while (this.submissionQueue.length > 0) {
             const submission = this.submissionQueue.shift();
-            
             try {
                 const currentComic = this.getCurrentComic();
-                
+                // Pass decrement flag to API
                 await comicAPI.submitFeedback(submission.comicId, submission.feedbackType, {
                     comicTokens: currentComic?.tokens || [],
-                    semanticConcepts: currentComic?.concepts || []
+                    semanticConcepts: currentComic?.concepts || [],
+                    action: submission.isDecrement ? 'decrement' : 'increment'
                 });
-                
-                console.log(`Successfully submitted feedback: ${submission.feedbackType}`);
-                
+                console.log(`Successfully submitted feedback: ${submission.feedbackType} (${submission.isDecrement ? 'decrement' : 'increment'})`);
             } catch (error) {
                 console.log(`Failed to submit feedback: ${submission.feedbackType}`, error);
                 // Don't retry, just continue with next item
             }
-            
-            // No delays needed - submit immediately
         }
-        
         this.isProcessingQueue = false;
-        
         // Update stats once after all submissions are done
         if (this.currentComicId) {
             this.loadFeedbackStats(this.currentComicId);
