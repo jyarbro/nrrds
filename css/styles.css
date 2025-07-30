@@ -135,14 +135,10 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: 
-        radial-gradient(circle at 20% 20%, rgba(255, 230, 109, 0.05) 200px, transparent 200px),
-        radial-gradient(circle at 80% 80%, rgba(78, 205, 196, 0.04) 150px, transparent 150px),
-        radial-gradient(circle at 50% 10%, rgba(255, 107, 107, 0.03) 100px, transparent 100px),
-        linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+    background: radial-gradient(circle at top center,
+               #ffffff 0%, #e8e8e8 60%, #d0d0d0 100%);
     pointer-events: none;
     border-radius: 17px;
-    animation: subtleShimmer 15s ease-in-out infinite;
 }
 
 @keyframes subtleShimmer {
@@ -276,6 +272,59 @@ body::before {
 
 .nav-btn-next {
     background: linear-gradient(145deg, #ffffff, #f0f0f0);
+}
+
+.nav-btn-generate {
+    background: linear-gradient(145deg, var(--accent-color), #f4e04d);
+    border: 4px solid var(--primary-color);
+    min-width: 70px;
+    justify-content: center;
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-btn-generate:hover:not(:disabled) {
+    background: linear-gradient(145deg, #fff176, var(--accent-color));
+    border-color: var(--secondary-color);
+    box-shadow: 
+        0 8px 0 var(--primary-color),
+        0 12px 20px rgba(255, 107, 107, 0.4),
+        0 0 30px rgba(255, 230, 109, 0.6);
+}
+
+.nav-sparkle {
+    font-size: 2.5rem;
+    animation: sparkle 2s ease-in-out infinite;
+    color: var(--primary-color);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.nav-btn-generate:hover:not(:disabled) .nav-sparkle {
+    color: var(--dark-color);
+    transform: scale(1.2) rotate(360deg);
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+    animation: sparkleHover 0.6s ease-in-out;
+}
+
+@keyframes sparkle {
+    0%, 100% { 
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(1.1) rotate(5deg);
+        opacity: 0.8;
+    }
+}
+
+@keyframes sparkleHover {
+    0% { transform: scale(1.2) rotate(0deg); }
+    25% { transform: scale(1.3) rotate(90deg); }
+    50% { transform: scale(1.4) rotate(180deg); }
+    75% { transform: scale(1.3) rotate(270deg); }
+    100% { transform: scale(1.2) rotate(360deg); }
 }
 
 /* Comic book style effects */
@@ -481,8 +530,10 @@ body::before {
     font-size: 2.5rem;
     text-align: center;
     margin-bottom: 25px;
-    color: var(--primary-color);
-    text-shadow: 2px 2px 0 var(--accent-color);
+    color: #333333;
+    text-shadow: 2px 2px 0 #ffffff, -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff;
+    z-index: 10;
+    position: relative;
 }
 
 .panel {
@@ -578,25 +629,54 @@ body::before {
 .speech-bubble::after {
     content: '';
     position: absolute;
-    bottom: -10px;
+    top: -10px;
     left: 30px;
     width: 0;
     height: 0;
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
-    border-top: 10px solid var(--border-color);
+    border-bottom: 10px solid var(--border-color);
 }
 
 .speech-bubble::before {
     content: '';
     position: absolute;
-    bottom: -7px;
+    top: -7px;
     left: 31px;
     width: 0;
     height: 0;
     border-left: 9px solid transparent;
     border-right: 9px solid transparent;
-    border-top: 9px solid white;
+    border-bottom: 9px solid white;
+}
+
+/* Arrow positioning for multiple speakers */
+.speech-bubble.arrow-left::after {
+    left: 20%;
+}
+
+.speech-bubble.arrow-left::before {
+    left: calc(20% + 1px);
+}
+
+.speech-bubble.arrow-center::after {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.speech-bubble.arrow-center::before {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.speech-bubble.arrow-right::after {
+    left: 80%;
+    transform: translateX(-100%);
+}
+
+.speech-bubble.arrow-right::before {
+    left: 80%;
+    transform: translateX(-100%);
 }
 
 .thought-bubble {

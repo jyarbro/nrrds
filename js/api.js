@@ -29,8 +29,11 @@ class ComicAPI {
      * @returns {Promise<any>} Response data.
      */
     async fetchAPI(endpoint, options = {}) {
+        const isDev = window.location.hostname === 'localhost';
+        const requestId = `xhr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const startTime = Date.now();
+        
         try {
-            const isDev = window.location.hostname === 'localhost';
             const url = isDev ? `/api/${endpoint}` : `${this.baseURL}/api/${endpoint}`;
             const fetchOptions = {
                 ...options,
@@ -41,20 +44,118 @@ class ComicAPI {
                     ...options.headers
                 }
             };
+            
+            if (isDev) {
+                console.log('🌐 [FRONTEND] XHR REQUEST:', {
+                    requestId,
+                    endpoint,
+                    url,
+                    method: options.method || 'GET',
+                    hasBody: !!options.body,
+                    bodySize: options.body ? options.body.length : 0,
+                    timestamp: new Date().toISOString()
+                });
+                
+                if (options.body && endpoint === 'generate-comic') {
+                    try {
+                        const bodyData = JSON.parse(options.body);
+                        console.log('📦 [FRONTEND] Comic Generation Payload:', {
+                            requestId,
+                            userId: bodyData.userId,
+                            hasPreferences: Object.keys(bodyData.preferences || {}).length > 0,
+                            hasTokenGuidance: Object.keys(bodyData.tokenGuidance || {}).length > 0,
+                            tokenGuidanceKeys: Object.keys(bodyData.tokenGuidance || {}),
+                            timestamp: bodyData.timestamp
+                        });
+                    } catch (e) {
+                        console.log('📦 [FRONTEND] Request body (unparseable):', options.body?.slice(0, 200));
+                    }
+                }
+            }
+            
             const response = await fetch(url, fetchOptions);
+            const duration = Date.now() - startTime;
+            
+            if (isDev) {
+                console.log('📡 [FRONTEND] XHR RESPONSE:', {
+                    requestId,
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    duration: `${duration}ms`,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
             if (!response.ok) {
                 let errorDetails = {};
                 try {
                     errorDetails = await response.json();
-                } catch (e) {}
+                    if (isDev) {
+                        console.error('❌ [FRONTEND] XHR ERROR DETAILS:', {
+                            requestId,
+                            status: response.status,
+                            errorDetails,
+                            duration: `${duration}ms`
+                        });
+                    }
+                } catch (e) {
+                    if (isDev) {
+                        console.error('❌ [FRONTEND] XHR ERROR (no JSON):', {
+                            requestId,
+                            status: response.status,
+                            statusText: response.statusText,
+                            duration: `${duration}ms`
+                        });
+                    }
+                }
                 const error = new Error(`HTTP error! status: ${response.status}`);
                 error.status = response.status;
                 error.details = errorDetails;
                 throw error;
             }
+            
             const data = await response.json();
+            
+            if (isDev) {
+                console.log('✅ [FRONTEND] XHR SUCCESS:', {
+                    requestId,
+                    duration: `${duration}ms`,
+                    responseSize: JSON.stringify(data).length,
+                    responseKeys: Object.keys(data),
+                    timestamp: new Date().toISOString()
+                });
+                
+                if (endpoint === 'generate-comic' && data.comic) {
+                    console.log('🎨 [FRONTEND] Generated Comic Details:', {
+                        requestId,
+                        comicId: data.comic.id,
+                        title: data.comic.title,
+                        emoji: data.comic.emoji,
+                        panelCount: data.comic.panels?.length || 0,
+                        hasTokens: (data.comic.tokens?.length || 0) > 0,
+                        hasConcepts: (data.comic.concepts?.length || 0) > 0,
+                        version: data.comic.version,
+                        backendRequestId: data.meta?.requestId,
+                        backendDuration: data.meta?.duration
+                    });
+                }
+            }
+            
             return data;
         } catch (error) {
+            const duration = Date.now() - startTime;
+            if (isDev) {
+                console.error('💥 [FRONTEND] XHR EXCEPTION:', {
+                    requestId,
+                    endpoint,
+                    error: error.message,
+                    duration: `${duration}ms`,
+                    stack: error.stack?.slice(0, 300),
+                    timestamp: new Date().toISOString()
+                });
+            }
             throw error;
         }
     }

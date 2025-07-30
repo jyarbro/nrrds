@@ -57,15 +57,21 @@ export default class ComicRenderer {
             header.textContent = panel.header;
             content.appendChild(header);
         }
-        if (panel.character) {
+        if (panel.characters && panel.characters.length > 0) {
+            const charactersContainer = this.createCharactersContainer(panel.characters);
+            content.appendChild(charactersContainer);
+        } else if (panel.character) {
+            // Fallback for old format
             const character = this.createCharacter(panel.character);
             content.appendChild(character);
         }
         if (panel.dialogue && panel.dialogue.length > 0) {
             const dialogueContainer = document.createElement('div');
             dialogueContainer.className = 'dialogue-container';
+            const hasMultipleCharacters = panel.characters && panel.characters.length > 1;
+            
             panel.dialogue.forEach((line, lineIndex) => {
-                const bubble = this.createDialogueBubble(line, lineIndex);
+                const bubble = this.createDialogueBubble(line, lineIndex, hasMultipleCharacters, panel.characters);
                 dialogueContainer.appendChild(bubble);
             });
             content.appendChild(dialogueContainer);
@@ -75,7 +81,61 @@ export default class ComicRenderer {
     }
 
     /**
-     * Create a character element for a panel.
+     * Create a characters container for multiple characters in a panel.
+     * @param {Array} charactersData - Array of character data.
+     * @returns {HTMLElement} Characters container element.
+     */
+    createCharactersContainer(charactersData) {
+        const container = document.createElement('div');
+        container.className = 'characters-container';
+        
+        charactersData.forEach((characterData, index) => {
+            const characterWrapper = this.createCharacterWithNameplate(characterData, index);
+            container.appendChild(characterWrapper);
+        });
+        
+        return container;
+    }
+
+    /**
+     * Create a character element with nameplate for multi-character panels.
+     * @param {object} characterData - Character data.
+     * @param {number} index - Character index for positioning.
+     * @returns {HTMLElement} Character wrapper element.
+     */
+    createCharacterWithNameplate(characterData, index) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'character-wrapper';
+        wrapper.setAttribute('data-character', characterData.name || `character-${index}`);
+        
+        const character = document.createElement('div');
+        character.className = 'character';
+        if (characterData.style) {
+            character.classList.add(`character-style-${characterData.style}`);
+        }
+        if (characterData.effect) {
+            character.classList.add(`effect-${characterData.effect}`);
+        }
+        if (characterData.emoji) {
+            character.textContent = characterData.emoji;
+        } else {
+            character.textContent = '😊';
+        }
+        
+        // Add nameplate if character has a name
+        if (characterData.name) {
+            const nameplate = document.createElement('div');
+            nameplate.className = 'character-nameplate';
+            nameplate.textContent = characterData.name;
+            wrapper.appendChild(nameplate);
+        }
+        
+        wrapper.appendChild(character);
+        return wrapper;
+    }
+
+    /**
+     * Create a character element for a panel (legacy single character support).
      * @param {object} characterData - Character data.
      * @returns {HTMLElement} Character element.
      */
@@ -105,11 +165,15 @@ export default class ComicRenderer {
      * Create a dialogue bubble element.
      * @param {string|object} line - Dialogue line or object.
      * @param {number} index - Line index.
+     * @param {boolean} hasMultipleCharacters - Whether panel has multiple characters.
+     * @param {Array} characters - Array of character data for positioning.
      * @returns {HTMLElement} Bubble element.
      */
-    createDialogueBubble(line, index) {
-        const bubble = document.createElement('div');
-        let text, type, style;
+    createDialogueBubble(line, index, hasMultipleCharacters = false, characters = []) {
+        const bubbleWrapper = document.createElement('div');
+        bubbleWrapper.className = 'bubble-wrapper';
+        
+        let text, type, style, speaker;
         if (typeof line === 'string') {
             text = line;
             type = 'speech';
@@ -117,7 +181,18 @@ export default class ComicRenderer {
             text = line.text || '';
             type = line.type || 'speech';
             style = line.style || null;
+            speaker = line.speaker;
         }
+        
+        // Add speaker nameplate if multiple characters and speaker is specified
+        if (hasMultipleCharacters && speaker) {
+            const speakerLabel = document.createElement('div');
+            speakerLabel.className = 'speaker-label';
+            speakerLabel.textContent = speaker;
+            bubbleWrapper.appendChild(speakerLabel);
+        }
+        
+        const bubble = document.createElement('div');
         switch (type) {
             case 'thought':
                 bubble.className = 'thought-bubble';
@@ -131,11 +206,49 @@ export default class ComicRenderer {
         if (style) {
             bubble.classList.add(`bubble-${style}`);
         }
+        if (speaker) {
+            bubble.setAttribute('data-speaker', speaker);
+        }
+        
+        // Add arrow positioning for speech bubbles based on speaker position
+        if (type === 'speech' && hasMultipleCharacters && speaker && characters) {
+            const speakerIndex = characters.findIndex(char => char.name === speaker);
+            const totalCharacters = characters.length;
+            
+            if (speakerIndex !== -1) {
+                if (totalCharacters === 2) {
+                    bubble.classList.add(speakerIndex === 0 ? 'arrow-left' : 'arrow-right');
+                } else if (totalCharacters === 3) {
+                    if (speakerIndex === 0) {
+                        bubble.classList.add('arrow-left');
+                    } else if (speakerIndex === 1) {
+                        bubble.classList.add('arrow-center');
+                    } else {
+                        bubble.classList.add('arrow-right');
+                    }
+                } else if (totalCharacters > 3) {
+                    // For more than 3 characters, distribute evenly
+                    const position = speakerIndex / (totalCharacters - 1);
+                    if (position < 0.33) {
+                        bubble.classList.add('arrow-left');
+                    } else if (position > 0.67) {
+                        bubble.classList.add('arrow-right');
+                    } else {
+                        bubble.classList.add('arrow-center');
+                    }
+                }
+            }
+        }
+        
         bubble.textContent = text;
         bubble.style.animationDelay = `${0.3 + (index * 0.1)}s`;
         bubble.style.animation = 'fadeInUp 0.5s ease-out forwards';
         bubble.style.opacity = '0';
-        return bubble;
+        
+        bubbleWrapper.appendChild(bubble);
+        bubbleWrapper.style.animationDelay = `${0.3 + (index * 0.1)}s`;
+        
+        return bubbleWrapper;
     }
 
     /**
@@ -174,10 +287,6 @@ export default class ComicRenderer {
         this.container.innerHTML = '';
     }
 }
-
-const style = document.createElement('style');
-style.textContent = `\n    @keyframes slideIn {\n        from {\n            transform: translateY(20px);\n            opacity: 0;\n        }\n        to {\n            transform: translateY(0);\n            opacity: 1;\n        }\n    }\n\n    @keyframes fadeInUp {\n        from {\n            transform: translateY(10px);\n            opacity: 0;\n        }\n        to {\n            transform: translateY(0);\n            opacity: 1;\n        }\n    }\n\n    .loading-state, .error-state {\n        text-align: center;\n        padding: 60px 20px;\n    }\n\n    .loading-icon, .error-icon {\n        font-size: 4rem;\n        margin-bottom: 20px;\n    }\n\n    .loading-state p {\n        font-size: 1.2rem;\n        color: #666;\n    }\n\n    .error-state h3 {\n        font-size: 1.8rem;\n        color: var(--primary-color);\n        margin-bottom: 10px;\n    }\n\n    .error-state p {\n        font-size: 1.1rem;\n        color: #666;\n    }\n\n    .dialogue-container {\n        display: flex;\n        flex-direction: column;\n        gap: 8px;\n        margin-top: auto;\n    }\n\n    .narration-box {\n        background: #f5f5f5;\n        border: 1px solid #999;\n        padding: 10px;\n        font-style: italic;\n        text-align: center;\n        margin: 10px 0;\n        border-radius: 5px;\n    }\n`;
-document.head.appendChild(style);
 
 const comicRenderer = new ComicRenderer();
 export { comicRenderer };

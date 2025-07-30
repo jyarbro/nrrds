@@ -27,6 +27,7 @@ class ComicApp {
         this.nextBtn = document.getElementById('nextBtn');
         this.previousBtn = document.getElementById('previousBtn');
         this.generateBtn = document.getElementById('generateBtn');
+        this.navGenerateBtn = document.getElementById('navGenerateBtn');
         this.controlsSection = document.getElementById('controlsSection');
         this.loadingOverlay = document.getElementById('loadingOverlay');
         this.errorModal = document.getElementById('errorModal');
@@ -45,6 +46,9 @@ class ComicApp {
         }
         if (this.generateBtn) {
             this.generateBtn.addEventListener('click', () => this.handleGenerateAction());
+        }
+        if (this.navGenerateBtn) {
+            this.navGenerateBtn.addEventListener('click', () => this.handleGenerateAction());
         }
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowRight') {
@@ -100,26 +104,106 @@ class ComicApp {
      */
     async generateNewComic() {
         if (this.isLoading) return;
+        
+        const isDev = window.location.hostname === 'localhost';
+        const generationId = `gen_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        
+        if (isDev) {
+            console.log('🎬 [APP] Starting comic generation process:', {
+                generationId,
+                timestamp: new Date().toISOString(),
+                currentComicsCount: this.comics.length
+            });
+        }
+        
         this.isLoading = true;
         this.showLoading();
+        
         try {
+            if (isDev) {
+                console.log('🔍 [APP] Getting user preferences from feedback system...');
+            }
             const preferences = feedbackSystem.getUserPreferences();
+            
+            if (isDev) {
+                console.log('📋 [APP] User preferences retrieved:', {
+                    generationId,
+                    hasPreferences: Object.keys(preferences).length > 0,
+                    preferenceKeys: Object.keys(preferences),
+                    tokenWeightsCount: Object.keys(preferences.tokenWeights || {}).length,
+                    conceptWeightsCount: Object.keys(preferences.conceptWeights || {}).length
+                });
+            }
+            
             const startTime = Date.now();
+            if (isDev) {
+                console.log('🚀 [APP] Calling API to generate comic...');
+            }
+            
             const comic = await comicAPI.generateComic(preferences);
             const elapsed = Date.now() - startTime;
-            if (elapsed < CONFIG.UI.LOADING_DELAY) {
-                await new Promise(resolve => setTimeout(resolve, CONFIG.UI.LOADING_DELAY - elapsed));
+            
+            if (isDev) {
+                console.log('✅ [APP] Comic generation completed!', {
+                    generationId,
+                    duration: `${elapsed}ms`,
+                    comicId: comic.id,
+                    title: comic.title,
+                    emoji: comic.emoji,
+                    panelCount: comic.panels?.length || 0
+                });
             }
+            
+            // Ensure minimum loading time for better UX
+            if (elapsed < CONFIG.UI.LOADING_DELAY) {
+                const remainingDelay = CONFIG.UI.LOADING_DELAY - elapsed;
+                if (isDev) {
+                    console.log('⏱️ [APP] Adding UI delay:', `${remainingDelay}ms`);
+                }
+                await new Promise(resolve => setTimeout(resolve, remainingDelay));
+            }
+            
             this.comics.unshift(comic);
             this.currentIndex = 0;
+            
+            if (isDev) {
+                console.log('🎨 [APP] Displaying new comic and updating UI...');
+            }
+            
             this.displayComic(comic);
+            this.updateNavigation();
             this.hideLoading();
+            
+            if (isDev) {
+                console.log('🎉 [APP] Comic generation process completed successfully!', {
+                    generationId,
+                    totalComicsNow: this.comics.length,
+                    displayedComicId: comic.id
+                });
+            }
+            
         } catch (error) {
-            console.error('Failed to generate comic:', error);
+            const errorId = `err_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            
+            if (isDev) {
+                console.error('💥 [APP] Comic generation failed:', {
+                    generationId,
+                    errorId,
+                    error: error.message,
+                    stack: error.stack?.slice(0, 500),
+                    timestamp: new Date().toISOString()
+                });
+            } else {
+                console.error('Failed to generate comic:', error);
+            }
+            
             this.hideLoading();
             this.showError(error.message || CONFIG.ERRORS.GENERATION_FAILED);
         } finally {
             this.isLoading = false;
+            if (isDev) {
+                console.log('🏁 [APP] Generation process finished (finally block)');
+            }
         }
     }
 
@@ -170,6 +254,9 @@ class ComicApp {
             if (this.generateBtn) {
                 this.generateBtn.style.display = 'inline-flex';
             }
+            if (this.navGenerateBtn) {
+                this.navGenerateBtn.style.display = 'none';
+            }
             if (this.nextBtn) {
                 this.nextBtn.disabled = true;
             }
@@ -179,6 +266,9 @@ class ComicApp {
         } else {
             if (this.generateBtn) {
                 this.generateBtn.style.display = 'none';
+            }
+            if (this.navGenerateBtn) {
+                this.navGenerateBtn.style.display = 'inline-flex';
             }
             
             // Update previous button
