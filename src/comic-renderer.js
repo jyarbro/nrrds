@@ -29,6 +29,27 @@ export default class ComicRenderer {
             strip.appendChild(panelElement);
         });
         comicWrapper.appendChild(strip);
+        
+        // Add generated date below the comic
+        if (comic.createdAt || comic.timestamp) {
+            const dateElement = document.createElement('div');
+            dateElement.className = 'comic-date';
+            const date = new Date(comic.createdAt || comic.timestamp);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const formattedTime = date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            dateElement.textContent = `Generated on ${formattedDate}`;
+            dateElement.title = `Generated at ${formattedTime}`;
+            comicWrapper.appendChild(dateElement);
+        }
+        
         this.container.appendChild(comicWrapper);
         this.animatePanels();
     }
