@@ -1,18 +1,9 @@
-let apiBaseUrl = '';
-try {
-  const isDev = window.location.hostname === 'localhost';
-  apiBaseUrl = isDev ? '' : (import.meta.env?.VITE_API_BASE_URL || 'https://api.nrrds.com');
-} catch (e) {}
-
 /**
  * Application configuration constants for nrrds frontend.
  * @readonly
  * @type {Object}
  */
 export const CONFIG = {
-    // API endpoints - Use environment variable (no fallback)
-    API_BASE_URL: apiBaseUrl,
-    
     // Local storage keys
     STORAGE_KEYS: {
         USER_ID: 'comic_user_id',
