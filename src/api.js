@@ -34,11 +34,10 @@ class ComicAPI {
         const startTime = Date.now();
         
         try {
-            const url = isDev ? `/api/${endpoint}` : `${this.baseURL}/api/${endpoint}`;
+            const url = isDev ? `/api/${endpoint}` : `${this.baseURL}/${endpoint}`;
             const fetchOptions = {
                 ...options,
-                credentials: isDev ? 'omit' : 'include',
-                mode: isDev ? 'same-origin' : 'cors',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
                     ...options.headers
