@@ -2,6 +2,7 @@ import comicAPI from './api.js';
 import { comicRenderer } from './comic-renderer.js';
 import { feedbackSystem } from './feedback.js';
 import { CONFIG } from './config.js';
+
 /**
  * Main application controller for nrrds comic app.
  * Handles comic navigation, generation, rendering, and feedback integration.

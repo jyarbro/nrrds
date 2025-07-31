@@ -1,32 +1,45 @@
-// Feedback system for collecting user reactions
 import comicAPI from './api.js';
 import { CONFIG } from './config.js';
 
+/**
+ * Feedback system for collecting user reactions to comics
+ */
 export default class FeedbackSystem {
+    /**
+     * Initialize the feedback system
+     */
     constructor() {
+        /** @type {HTMLElement} The feedback section element */
         this.feedbackSection = document.getElementById('feedbackSection');
+        /** @type {HTMLElement} The feedback statistics display element */
         this.feedbackStats = document.getElementById('feedbackStats');
-        this.selectedFeedback = new Map(); // Track multiple feedback per comic (comic ID -> Set of feedback types)
-        this.submissionQueue = []; // Queue for API submissions
-        this.isProcessingQueue = false; // Flag to prevent multiple queue processors
+        /** @type {Map<string, Set<string>>} Track multiple feedback per comic (comic ID -> Set of feedback types) */
+        this.selectedFeedback = new Map();
+        /** @type {Array} Queue for API submissions */
+        this.submissionQueue = [];
+        /** @type {boolean} Flag to prevent multiple queue processors */
+        this.isProcessingQueue = false;
         this.initializeEventListeners();
     }
 
-    // Initialize event listeners
+    /**
+     * Initialize event listeners for feedback buttons
+     */
     initializeEventListeners() {
-        // Add click handlers to all emoji buttons
         document.querySelectorAll('.emoji-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.handleFeedbackClick(e), { once: false });
         });
     }
 
-    // Show feedback section for a comic
+    /**
+     * Show feedback section for a specific comic
+     * @param {string} comicId - The ID of the comic to show feedback for
+     */
     show(comicId) {
         this.currentComicId = comicId;
         this.feedbackSection.style.display = 'block';
         this.resetButtonStates();
 
-        // Restore previous selections from localStorage if present
         const localKey = `comic_feedback_${comicId}`;
         let previousFeedbackSet;
         try {
@@ -55,15 +68,19 @@ export default class FeedbackSystem {
         this.loadFeedbackStats(comicId);
     }
 
-    // Hide feedback section
+    /**
+     * Hide the feedback section
+     */
     hide() {
         this.feedbackSection.style.display = 'none';
         this.currentComicId = null;
     }
 
-    // Handle feedback button click
+    /**
+     * Handle feedback button click events
+     * @param {Event} event - The click event
+     */
     async handleFeedbackClick(event) {
-        // Prevent event bubbling
         event.preventDefault();
         event.stopPropagation();
         
@@ -74,66 +91,59 @@ export default class FeedbackSystem {
             return;
         }
         
-        // Get current selections for this comic
         let feedbackSet = this.selectedFeedback.get(this.currentComicId) || new Set();
         let wasSelected = feedbackSet.has(feedbackType);
         
-        // Toggle selection
         if (wasSelected) {
-            // Remove if already selected
             feedbackSet.delete(feedbackType);
             btn.classList.remove('selected');
             
-            // Re-enable other buttons if we're now under 3
             if (feedbackSet.size < 3) {
                 this.enableReactionButtons();
             }
-            // Submit decrement feedback
-            this.submitFeedbackImmediately(feedbackType, btn, true); // true = decrement
+            this.submitFeedbackImmediately(feedbackType, btn, true);
         } else {
-            // Add if not selected and less than 3 total
             if (feedbackSet.size < 3) {
                 feedbackSet.add(feedbackType);
                 btn.classList.add('selected');
                 
-                // Animate the selection
                 btn.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     btn.style.transform = '';
                 }, 100);
                 
-                // If we now have 3 selections, disable other buttons
                 if (feedbackSet.size >= 3) {
                     this.disableUnselectedButtons();
                 }
-                // Submit increment feedback
-                this.submitFeedbackImmediately(feedbackType, btn, false); // false = increment
+                this.submitFeedbackImmediately(feedbackType, btn, false);
             } else {
-                // Already have 3 selections, don't allow more
                 return;
             }
         }
         
-        // Store updated selections
         this.selectedFeedback.set(this.currentComicId, feedbackSet);
-        // Save to localStorage
         try {
             const localKey = `comic_feedback_${this.currentComicId}`;
             localStorage.setItem(localKey, JSON.stringify(Array.from(feedbackSet)));
-        } catch (e) {}
+        } catch (e) {
+            // Ignore localStorage errors
+        }
     }
 
-    // Reset all button states
+    /**
+     * Reset all button states to default
+     */
     resetButtonStates() {
         document.querySelectorAll('.emoji-btn').forEach(btn => {
             btn.classList.remove('selected');
-            // Don't interfere with temporarily disabled buttons
         });
     }
 
-    // Show success animation
+    /**
+     * Show success animation on a feedback button
+     * @param {HTMLElement} button - The button element to animate
+     */
     showFeedbackSuccess(button) {
-        // Create success indicator
         const success = document.createElement('div');
         success.className = 'feedback-success';
         success.innerHTML = '✓';
@@ -154,7 +164,9 @@ export default class FeedbackSystem {
         setTimeout(() => success.remove(), 500);
     }
 
-    // Show error state
+    /**
+     * Show error message for failed feedback submission
+     */
     showFeedbackError() {
         const errorMsg = document.createElement('div');
         errorMsg.className = 'feedback-error';
@@ -175,7 +187,10 @@ export default class FeedbackSystem {
         setTimeout(() => errorMsg.remove(), 3000);
     }
 
-    // Show rate limit error
+    /**
+     * Show rate limit error message
+     * @param {string} message - The error message to display
+     */
     showRateLimitError(message) {
         const errorMsg = document.createElement('div');
         errorMsg.className = 'feedback-rate-limit-error';
@@ -196,12 +211,16 @@ export default class FeedbackSystem {
         `;
         
         document.body.appendChild(errorMsg);
-        setTimeout(() => errorMsg.remove(), 5000); // Show longer for rate limit
+        setTimeout(() => errorMsg.remove(), 5000);
     }
     
-    // Queue feedback for submission to avoid rate limits
+    /**
+     * Queue feedback for immediate submission to avoid rate limits
+     * @param {string} feedbackType - The type of feedback
+     * @param {HTMLElement} btn - The button element
+     * @param {boolean} isDecrement - Whether this is a decrement operation
+     */
     submitFeedbackImmediately(feedbackType, btn, isDecrement = false) {
-        // Check if this exact submission is already in the queue
         const submissionKey = `${this.currentComicId}-${feedbackType}-${isDecrement ? 'decrement' : 'increment'}`;
         const isDuplicate = this.submissionQueue.some(item => 
             item.comicId === this.currentComicId && item.feedbackType === feedbackType && item.isDecrement === isDecrement
@@ -211,7 +230,6 @@ export default class FeedbackSystem {
             return;
         }
         
-        // Add to queue
         this.submissionQueue.push({
             comicId: this.currentComicId,
             feedbackType: feedbackType,
@@ -220,18 +238,17 @@ export default class FeedbackSystem {
             isDecrement: isDecrement
         });
         
-        // Update local preferences immediately
         const currentComic = this.getCurrentComic();
         this.updateLocalPreferences(feedbackType, currentComic);
         
-        // Show success animation immediately (local state is what matters)
         this.showFeedbackSuccess(btn);
         
-        // Process the queue
         this.processSubmissionQueue();
     }
 
-    // Process the submission queue with proper spacing
+    /**
+     * Process the submission queue with proper spacing to avoid rate limits
+     */
     async processSubmissionQueue() {
         if (this.isProcessingQueue || this.submissionQueue.length === 0) {
             return;
@@ -243,44 +260,45 @@ export default class FeedbackSystem {
             const submission = this.submissionQueue.shift();
             try {
                 const currentComic = this.getCurrentComic();
-                // Pass decrement flag to API
                 await comicAPI.submitFeedback(submission.comicId, submission.feedbackType, {
                     comicTokens: currentComic?.tokens || [],
                     semanticConcepts: currentComic?.concepts || [],
                     action: submission.isDecrement ? 'decrement' : 'increment'
                 });
             } catch (error) {
-                // Don't retry, just continue with next item
             }
         }
         this.isProcessingQueue = false;
-        // Update stats once after all submissions are done
         if (this.currentComicId) {
             this.loadFeedbackStats(this.currentComicId);
         }
     }
 
-    // Load and display feedback statistics
+    /**
+     * Load and display feedback statistics for a comic
+     * @param {string} comicId - The ID of the comic to load stats for
+     */
     async loadFeedbackStats(comicId) {
         try {
             const stats = await comicAPI.getFeedbackStats(comicId);
             this.displayStats(stats);
         } catch (error) {
             console.error('Failed to load feedback stats:', error);
-            // Show friendly fallback message
             this.feedbackStats.innerHTML = '<p>Share your reactions!</p>';
         }
     }
     
 
-    // Display feedback statistics
+    /**
+     * Display feedback statistics in the UI
+     * @param {Object} stats - The statistics object
+     */
     displayStats(stats) {
         if (!stats || Object.keys(stats).length === 0) {
             this.feedbackStats.innerHTML = '<p>Be the first to share a reaction!</p>';
             return;
         }
 
-        // Calculate total feedback (exclude 'total' and other meta fields)
         const excludeFields = ['total', 'score', 'engagementRate', 'uniqueUsers'];
         const totalFeedback = Object.entries(stats)
             .filter(([key, value]) => !excludeFields.includes(key))
@@ -291,21 +309,18 @@ export default class FeedbackSystem {
             return;
         }
         
-        // Create stats display
         let statsHTML = ``;
         
-        // Show all reactions (exclude meta fields) sorted by feedback value (best to worst)
         const allReactions = Object.entries(stats)
             .filter(([key, value]) => !excludeFields.includes(key))
             .filter(([,count]) => count > 0)
             .sort(([typeA, countA], [typeB, countB]) => {
-                // Sort by feedback weight (best to worst), then by count if weights are equal
                 const weightA = CONFIG.FEEDBACK_TYPES[typeA]?.weight || 0;
                 const weightB = CONFIG.FEEDBACK_TYPES[typeB]?.weight || 0;
                 if (weightA !== weightB) {
-                    return weightB - weightA; // Higher weight first
+                    return weightB - weightA;
                 }
-                return countB - countA; // Higher count first if weights are equal
+                return countB - countA;
             });
         
         if (allReactions.length > 0) {
@@ -328,28 +343,27 @@ export default class FeedbackSystem {
         this.feedbackStats.innerHTML = statsHTML;
     }
 
-    // Update local preferences for AI training
+    /**
+     * Update local preferences for AI training based on feedback
+     * @param {string} feedbackType - The type of feedback given
+     * @param {Object} comic - The comic object with tokens and concepts
+     */
     updateLocalPreferences(feedbackType, comic) {
         try {
             const prefs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.USER_PREFERENCES) || '{}');
             
-            // Initialize feedback counts if not exists
             if (!prefs.feedbackCounts) {
                 prefs.feedbackCounts = {};
             }
             
-            // Initialize token preferences if not exists
             if (!prefs.tokenPreferences) {
                 prefs.tokenPreferences = {};
             }
             
-            // Increment feedback count
             prefs.feedbackCounts[feedbackType] = (prefs.feedbackCounts[feedbackType] || 0) + 1;
             
-            // Get feedback weight for this reaction type
             const feedbackWeight = CONFIG.FEEDBACK_TYPES[feedbackType]?.weight || 0;
             
-            // Update token preferences based on comic content
             if (comic?.tokens) {
                 this.updateTokenPreferences(prefs, comic.tokens, feedbackWeight);
             }
@@ -358,13 +372,10 @@ export default class FeedbackSystem {
                 this.updateConceptPreferences(prefs, comic.concepts, feedbackWeight);
             }
             
-            // Update last feedback time
             prefs.lastFeedbackTime = new Date().toISOString();
             
-            // Calculate preference weights
             this.calculatePreferenceWeights(prefs);
             
-            // Save back to localStorage
             localStorage.setItem(CONFIG.STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(prefs));
             
         } catch (error) {
@@ -372,7 +383,10 @@ export default class FeedbackSystem {
         }
     }
 
-    // Calculate preference weights based on feedback history
+    /**
+     * Calculate preference weights based on feedback history
+     * @param {Object} prefs - The preferences object to update
+     */
     calculatePreferenceWeights(prefs) {
         if (!prefs.feedbackCounts) return;
         
@@ -384,7 +398,6 @@ export default class FeedbackSystem {
         Object.entries(prefs.feedbackCounts).forEach(([type, count]) => {
             const feedbackData = CONFIG.FEEDBACK_TYPES[type];
             if (feedbackData) {
-                // Calculate weighted preference based on feedback type and frequency
                 const frequencyWeight = count / totalFeedback;
                 const typeWeight = feedbackData.weight;
                 prefs.preferenceWeights[type] = frequencyWeight * typeWeight;
@@ -392,7 +405,12 @@ export default class FeedbackSystem {
         });
     }
 
-    // Update token preferences based on feedback
+    /**
+     * Update token preferences based on feedback
+     * @param {Object} prefs - The preferences object
+     * @param {Array} tokens - Array of tokens from the comic
+     * @param {number} feedbackWeight - The weight of the feedback
+     */
     updateTokenPreferences(prefs, tokens, feedbackWeight) {
         if (!prefs.tokenPreferences) prefs.tokenPreferences = {};
         
@@ -404,14 +422,18 @@ export default class FeedbackSystem {
             const current = prefs.tokenPreferences[token];
             const decayFactor = CONFIG.TOKEN_ANALYSIS.FEEDBACK_DECAY_RATE;
             
-            // Apply exponential moving average for token weights
             current.weight = (current.weight * decayFactor) + (feedbackWeight * (1 - decayFactor));
             current.count += 1;
             current.lastUpdated = new Date().toISOString();
         });
     }
     
-    // Update concept preferences based on feedback
+    /**
+     * Update concept preferences based on feedback
+     * @param {Object} prefs - The preferences object
+     * @param {Array} concepts - Array of concepts from the comic
+     * @param {number} feedbackWeight - The weight of the feedback
+     */
     updateConceptPreferences(prefs, concepts, feedbackWeight) {
         if (!prefs.conceptPreferences) prefs.conceptPreferences = {};
         
@@ -423,25 +445,28 @@ export default class FeedbackSystem {
             const current = prefs.conceptPreferences[concept];
             const decayFactor = CONFIG.TOKEN_ANALYSIS.FEEDBACK_DECAY_RATE;
             
-            // Apply exponential moving average for concept weights
             current.weight = (current.weight * decayFactor) + (feedbackWeight * (1 - decayFactor));
             current.count += 1;
             current.lastUpdated = new Date().toISOString();
         });
     }
     
-    // Get current comic data (needs to be implemented by app)
+    /**
+     * Get current comic data (needs to be implemented by app)
+     * @returns {Object|null} The current comic object or null
+     */
     getCurrentComic() {
-        // This will be called from the main app to get current comic data
         return window.app?.getCurrentComic?.() || null;
     }
 
-    // Get user preferences for comic generation
+    /**
+     * Get user preferences for comic generation
+     * @returns {Object} User preferences object with feedback weights and token/concept preferences
+     */
     getUserPreferences() {
         try {
             const prefs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.USER_PREFERENCES) || '{}');
             
-            // Build comprehensive preference object
             const preferences = {
                 feedbackWeights: prefs.preferenceWeights || {},
                 tokenWeights: {},
@@ -452,7 +477,6 @@ export default class FeedbackSystem {
                 encourageConcepts: []
             };
             
-            // Process token preferences
             if (prefs.tokenPreferences) {
                 Object.entries(prefs.tokenPreferences).forEach(([token, data]) => {
                     if (data.count >= CONFIG.TOKEN_ANALYSIS.MIN_TOKEN_FREQUENCY) {
@@ -467,7 +491,6 @@ export default class FeedbackSystem {
                 });
             }
             
-            // Process concept preferences
             if (prefs.conceptPreferences) {
                 Object.entries(prefs.conceptPreferences).forEach(([concept, data]) => {
                     if (data.count >= CONFIG.TOKEN_ANALYSIS.MIN_TOKEN_FREQUENCY) {
@@ -489,7 +512,9 @@ export default class FeedbackSystem {
         }
     }
 
-    // Disable only unselected reaction buttons when 3 selections made
+    /**
+     * Disable only unselected reaction buttons when 3 selections are made
+     */
     disableUnselectedButtons() {
         document.querySelectorAll('.emoji-btn').forEach(btn => {
             if (!btn.classList.contains('selected')) {
@@ -500,7 +525,9 @@ export default class FeedbackSystem {
         });
     }
 
-    // Enable all reaction buttons
+    /**
+     * Enable all reaction buttons
+     */
     enableReactionButtons() {
         document.querySelectorAll('.emoji-btn').forEach(btn => {
             btn.disabled = false;
@@ -510,7 +537,9 @@ export default class FeedbackSystem {
     }
 
 
-    // Override resetButtonStates to handle multiple selections
+    /**
+     * Reset all button states to handle multiple selections
+     */
     resetButtonStates() {
         document.querySelectorAll('.emoji-btn').forEach(btn => {
             btn.classList.remove('selected');
@@ -521,7 +550,9 @@ export default class FeedbackSystem {
     }
 }
 
-// Add required CSS for feedback animations
+/**
+ * Add required CSS for feedback animations
+ */
 const feedbackStyle = document.createElement('style');
 feedbackStyle.textContent = `
     @keyframes successPop {
@@ -575,6 +606,9 @@ feedbackStyle.textContent = `
 `;
 document.head.appendChild(feedbackStyle);
 
-// Create and export singleton instance
+/**
+ * Create and export singleton instance of the feedback system
+ * @type {FeedbackSystem}
+ */
 const feedbackSystem = new FeedbackSystem();
 export { feedbackSystem };
