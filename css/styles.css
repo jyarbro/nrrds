@@ -1685,14 +1685,14 @@ body::before {
 
 @media (max-width: 580px) {
     .reactions-container {
-        max-width: 400px;
+        max-width: 230px;
     }
     
     .emoji-reactions-grid {
         grid-template-columns: repeat(3, minmax(80px, 1fr));
         gap: 10px;
-        margin-left: -20px;
-        margin-right: -20px;
+        margin-left: -30px;
+        margin-right: -30px;
         width: calc(100% + 40px);
     }
     
@@ -1708,43 +1708,3 @@ body::before {
         font-size: 0.8rem;
     }
 }
-
-@media (max-width: 480px) {
-    .comic-reaction-stats {
-        max-width: calc(3 * (2rem + 8px) - 8px);
-        gap: 6px;
-        padding: 4px 12px;
-    }
-    
-    .reactions-container {
-        margin: 15px auto 10px auto;
-        padding: 12px;
-        max-width: 280px;
-    }
-    
-    .reactions-title {
-        font-size: 1.2rem;
-        margin: 0 0 10px 0;
-    }
-    
-    .emoji-reactions-grid {
-        grid-template-columns: repeat(3, minmax(70px, 1fr));
-        gap: 8px;
-        margin-left: -15px;
-        margin-right: -15px;
-        width: calc(100% + 30px);
-    }
-    
-    .emoji-btn {
-        padding: 10px;
-    }
-    
-    .emoji-btn .emoji {
-        font-size: 1.8rem;
-    }
-    
-    .emoji-btn .label {
-        font-size: 0.75rem;
-    }
-}
-
