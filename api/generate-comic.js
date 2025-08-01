@@ -217,6 +217,62 @@ async function getRecentTokenStats() {
   }
 }
 
+// Get overused themes from recent comics
+async function getOverusedThemes() {
+  try {
+    // Get recent comics to analyze theme frequency
+    const recentComics = await kv.lrange('comics:recent', 0, 49); // Last 50 comics
+    
+    if (!recentComics || recentComics.length === 0) {
+      return [];
+    }
+    
+    const themeCount = {};
+    
+    // Count occurrences of each theme
+    for (const comicId of recentComics.slice(0, 30)) { // Check last 30 comics
+      try {
+        const comic = await kv.get(`comic:${comicId}`);
+        if (comic && comic.concepts) {
+          comic.concepts.forEach(concept => {
+            themeCount[concept] = (themeCount[concept] || 0) + 1;
+          });
+        }
+      } catch (error) {
+        // Skip if comic can't be loaded
+        continue;
+      }
+    }
+    
+    // Identify overused themes (appearing in >40% of recent comics)
+    const totalComics = Math.min(recentComics.length, 30);
+    const threshold = Math.ceil(totalComics * 0.4);
+    
+    const overusedThemes = Object.entries(themeCount)
+      .filter(([theme, count]) => count >= threshold)
+      .map(([theme, count]) => theme);
+    
+    // Always include coffee and sleep if they appear frequently
+    const frequentThemes = Object.entries(themeCount)
+      .filter(([theme, count]) => ['coffee', 'sleep'].includes(theme) && count >= Math.ceil(totalComics * 0.25))
+      .map(([theme, count]) => theme);
+    
+    const result = [...new Set([...overusedThemes, ...frequentThemes])];
+    
+    log('🔍 Overused theme analysis:', {
+      totalComicsAnalyzed: totalComics,
+      threshold,
+      themeCount,
+      overusedThemes: result
+    });
+    
+    return result;
+  } catch (error) {
+    log('Error getting overused themes:', error);
+    return ['coffee', 'sleep']; // Default to avoiding coffee and sleep if analysis fails
+  }
+}
+
 // Combine personal and global token guidance
 async function combineTokenGuidance(personalGuidance, globalGuidance, userId) {
   try {
@@ -256,6 +312,10 @@ async function combineTokenGuidance(personalGuidance, globalGuidance, userId) {
 async function generateComicScript(guidance) {
   log('🎬 STEP 1: Starting creative comic script generation...');
   
+  // Check for overused themes and add them to avoid list
+  const overusedThemes = await getOverusedThemes();
+  const combinedAvoidConcepts = [...(guidance.avoidConcepts || []), ...overusedThemes];
+  
   // Build token guidance prompt
   const avoidSection = guidance.avoidTokens?.length > 0 ? 
     `AVOID these patterns that users found uninteresting: ${guidance.avoidTokens.join(', ')}` : '';
@@ -263,8 +323,8 @@ async function generateComicScript(guidance) {
   const encourageSection = guidance.encourageTokens?.length > 0 ? 
     `ENCOURAGE these patterns users enjoyed: ${guidance.encourageTokens.join(', ')}` : '';
   
-  const conceptAvoidSection = guidance.avoidConcepts?.length > 0 ? 
-    `AVOID these themes: ${guidance.avoidConcepts.join(', ')}` : '';
+  const conceptAvoidSection = combinedAvoidConcepts.length > 0 ? 
+    `AVOID these overused themes: ${combinedAvoidConcepts.join(', ')}` : '';
   
   const conceptEncourageSection = guidance.encourageConcepts?.length > 0 ? 
     `CONSIDER these themes: ${guidance.encourageConcepts.join(', ')}` : '';
@@ -285,21 +345,26 @@ async function generateComicScript(guidance) {
 
 ${guidancePrompt || 'Create original, relatable humor'}
 
-IMPORTANT: Focus on creativity and storytelling. Don't worry about formatting - just create great content.
+IMPORTANT: Focus on creativity and storytelling. Explore diverse themes beyond typical office/coffee/sleep humor.
+
+Theme Variety Guidelines:
+- Consider fresh perspectives on: hobbies, social situations, exercise, food adventures, technology mishaps, relationship dynamics, family moments, or creative pursuits
+- Avoid repetitive scenarios about being tired, needing coffee, or workplace stress unless specifically encouraged
+- Think about universal experiences that aren't just about exhaustion or caffeine dependency
 
 Requirements:
 - Create 3-4 panels that tell a complete story (setup, development, punchline)
 - CLEARLY identify all characters who speak or appear in each panel
 - For each character, specify:
   * Their name (like "Alex", "Mom", "Boss", "Friend", etc.)
-  * An emoji that represents them (like 😊 for happy person, 😴 for tired person, 👩‍💼 for professional, etc.)
+  * An emoji that represents them (like 😊 for happy person, 🎨 for creative person, 👩‍💼 for professional, etc.)
   * What they say or think in that panel
 - Each panel should have:
-  * A time/location context (like "9:00 AM" or "At the coffee shop")
+  * A time/location context (like "Saturday afternoon" or "At the bookstore")
   * Clear indication of WHO is speaking/thinking each line
   * Clear progression toward the punchline
 - Make it relatable, funny, and suitable for all audiences
-- Focus on universal experiences like work, technology, relationships, daily struggles, etc.
+- Focus on diverse universal experiences like hobbies, social interactions, creative pursuits, exercise, food, technology, relationships, family dynamics, etc.
 
 CRITICAL: If multiple people speak in a panel, make it VERY clear who says what. For example:
 "Panel 1: At the office, 9 AM
@@ -786,9 +851,14 @@ function extractConceptsFromComic(comicData, guidance) {
       'work': ['meeting', 'boss', 'office', 'deadline', 'project', 'email', 'corporate'],
       'procrastination': ['later', 'tomorrow', 'procrastinat', 'delay', 'postpone'],
       'coffee': ['coffee', 'caffeine', 'espresso', 'latte', 'brew'],
+      'sleep': ['sleep', 'tired', 'fatigue', 'exhausted', 'sleepy', 'nap', 'insomnia'],
       'time-pressure': ['hurry', 'rush', 'deadline', 'late', 'quick', 'urgent'],
       'frustration': ['angry', 'upset', 'annoyed', 'irritated', 'mad'],
-      'escalation': ['worse', 'terrible', 'awful', 'horrible', 'disaster']
+      'escalation': ['worse', 'terrible', 'awful', 'horrible', 'disaster'],
+      'social': ['friend', 'family', 'relationship', 'dating', 'party', 'social'],
+      'hobbies': ['game', 'sport', 'music', 'art', 'book', 'movie', 'hobby'],
+      'food': ['food', 'eat', 'hungry', 'restaurant', 'cook', 'recipe', 'meal'],
+      'exercise': ['gym', 'workout', 'run', 'exercise', 'fitness', 'health']
     };
     
     Object.entries(conceptMappings).forEach(([concept, keywords]) => {
