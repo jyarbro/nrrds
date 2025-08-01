@@ -23,6 +23,8 @@ export default class ReactionsSystem {
         this.submissionQueue = [];
         /** @type {boolean} Flag to prevent multiple queue processors */
         this.isProcessingQueue = false;
+        /** @type {boolean} Flag to prevent stats reload immediately after optimistic update */
+        this.justUpdatedOptimistically = false;
         this.initializeEventListeners();
     }
 
@@ -249,6 +251,7 @@ export default class ReactionsSystem {
         
         // Update stats immediately for better UX
         this.updateStatsImmediately(reactionType, isDecrement);
+        this.justUpdatedOptimistically = true;
         
         this.processSubmissionQueue();
     }
@@ -340,8 +343,13 @@ export default class ReactionsSystem {
             }
         }
         this.isProcessingQueue = false;
+        // Don't immediately reload stats to avoid overwriting optimistic updates
+        // Instead, reload after a delay to get the authoritative server data
         if (this.currentComicId) {
-            this.loadReactionStats(this.currentComicId);
+            setTimeout(() => {
+                this.justUpdatedOptimistically = false;
+                this.loadReactionStats(this.currentComicId);
+            }, 1500); // 1.5 second delay to ensure server has processed the update
         }
     }
 
