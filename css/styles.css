@@ -156,8 +156,9 @@ body::before {
     right: 0;
     bottom: 0;
     background: radial-gradient(circle at top center,
-               #ffffff 0%, #e8d5f2 40%, #c8a6d8 100%);
-    pointer-events: none;
+               #ffffff 0%, #e8d5f2 40%, #9B59B6 100%);
+
+               pointer-events: none;
     border-radius: 17px;
 }
 
