@@ -2,6 +2,12 @@ import { kv } from '../lib/redis.js';
 
 const log = (...args) => console.log('[GET-COMIC]', ...args);
 
+/**
+ * Retrieves a specific comic by ID from Redis storage
+ * @param {Object} req - HTTP request object with query parameters
+ * @param {Object} res - HTTP response object
+ * @returns {Promise<void>} JSON response with comic data or error
+ */
 export default async function handler(req, res) {
 
   try {
@@ -17,7 +23,6 @@ export default async function handler(req, res) {
     }
 
     log('Querying Redis for key:', `comic:${id}`);
-    // Get comic from Redis
     const comicData = await kv.get(`comic:${id}`);
     
     if (!comicData) {
@@ -32,10 +37,8 @@ export default async function handler(req, res) {
     log('Comic found in Redis:', id);
     const comic = comicData;
 
-    // Get comic stats
     const stats = await kv.hgetall(`comic:${id}:stats`) || {};
 
-    // Cache for 1 hour
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
 
     return res.status(200).json({

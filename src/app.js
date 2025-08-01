@@ -1,6 +1,6 @@
 import comicAPI from './api.js';
 import { comicRenderer } from './comic-renderer.js';
-import { feedbackSystem } from './feedback.js';
+import { reactionsSystem } from './reactions.js';
 import { CONFIG } from './config.js';
 
 /**
@@ -110,7 +110,7 @@ class ComicApp {
         this.showLoading();
         
         try {
-            const preferences = feedbackSystem.getUserPreferences();
+            const preferences = reactionsSystem.getUserPreferences();
             const startTime = Date.now();
             const comic = await comicAPI.generateComic(preferences);
             const elapsed = Date.now() - startTime;
@@ -143,7 +143,7 @@ class ComicApp {
     displayComic(comic) {
         this.currentComic = comic;
         comicRenderer.render(comic);
-        feedbackSystem.show(comic.id);
+        reactionsSystem.show(comic.id);
     }
 
     /**

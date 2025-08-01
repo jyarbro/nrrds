@@ -2,15 +2,19 @@ import { kv } from '../lib/redis.js';
 
 const log = (...args) => console.log('[GET-RECENT-COMICS]', ...args);
 
+/**
+ * Retrieves recent comics from Redis storage
+ * @param {Object} req - HTTP request object with query parameters
+ * @param {Object} res - HTTP response object
+ * @returns {Promise<void>} JSON response with recent comics or error
+ */
 export default async function handler(req, res) {
-
   try {
     const { limit = 10 } = req.query;
-    const maxLimit = Math.min(parseInt(limit), 50); // Cap at 50 comics
+    const maxLimit = Math.min(parseInt(limit), 50);
     
     log('Fetching recent comics, limit:', maxLimit);
 
-    // Get recent comic IDs from Redis list
     const comicIds = await kv.lrange('comics:recent', 0, maxLimit - 1);
     
     if (!comicIds || comicIds.length === 0) {
@@ -23,7 +27,6 @@ export default async function handler(req, res) {
 
     log('Found comic IDs:', comicIds);
 
-    // Fetch full comic data for each ID
     const comicKeys = comicIds.map(id => `comic:${id}`);
     const comicData = await kv.mget(comicKeys);
     
@@ -38,7 +41,6 @@ export default async function handler(req, res) {
 
     log(`Successfully fetched ${comics.length} of ${comicIds.length} recent comics`);
 
-    // Cache for 5 minutes
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
 
     return res.status(200).json({

@@ -1,7 +1,13 @@
 import { kv } from '../lib/redis.js';
 
-const log = (...args) => console.log('[GET-FEEDBACK]', ...args);
+const log = (...args) => console.log('[GET-REACTIONS]', ...args);
 
+/**
+ * Retrieves reaction statistics for a specific comic
+ * @param {Object} req - HTTP request object with query parameters
+ * @param {Object} res - HTTP response object
+ * @returns {Promise<void>} JSON response with reaction stats or error
+ */
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     log('Options request received, responding with 204');
@@ -15,7 +21,7 @@ export default async function handler(req, res) {
 
   try {
     const { comicId } = req.query;
-    log('Fetching feedback for comicId:', comicId);
+    log('Fetching reactions for comicId:', comicId);
 
     if (!comicId) {
       return res.status(400).json({ 
@@ -24,39 +30,39 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get comic statistics
     const stats = await getComicStats(comicId);
-    log('Feedback stats:', stats);
+    log('Reaction stats:', stats);
 
-    // Get recent feedback details (optional)
-    const recentFeedback = await getRecentFeedback(comicId);
+    const recentReactions = await getRecentReactions(comicId);
 
-    // Cache for 5 minutes
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
 
     return res.status(200).json({
       success: true,
       comicId,
       stats,
-      recentFeedback,
+      recentReactions,
       lastUpdated: new Date().toISOString()
     });
 
   } catch (error) {
-    log('Error getting feedback:', error);
+    log('Error getting reactions:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to retrieve feedback'
+      error: 'Failed to retrieve reactions'
     });
   }
 }
 
-// Get comic statistics
+/**
+ * Retrieves and processes comic statistics from Redis
+ * @param {string} comicId - The comic ID to get stats for
+ * @returns {Promise<Object>} Processed comic statistics
+ */
 async function getComicStats(comicId) {
   try {
     const stats = await kv.hgetall(`comic:${comicId}:stats`) || {};
     
-    // Convert string values to numbers
     const processedStats = {};
     for (const [key, value] of Object.entries(stats)) {
       if (key === 'score') {
@@ -66,24 +72,21 @@ async function getComicStats(comicId) {
       }
     }
 
-    // Ensure all feedback types are represented
-    const feedbackTypes = [
+    const reactionTypes = [
       'thumbsup', 'lol', 'heartwarming', 'awesome', 'inspired', 'unique',
       'mindblown', 'celebrating', 'deep', 'relatable', 'confused', 'meh',
       'sad', 'spooked', 'grossedout', 'cringe', 'angry', 'facepalm',
       'eyeroll', 'skeptical', 'offended'
     ];
-    feedbackTypes.forEach(type => {
+    reactionTypes.forEach(type => {
       if (!(type in processedStats)) {
         processedStats[type] = 0;
       }
     });
 
-    // Get unique user count
     const uniqueUsers = await kv.scard(`comic:${comicId}:users`) || 0;
     processedStats.uniqueUsers = uniqueUsers;
     
-    // Calculate engagement rate
     const total = processedStats.total || 0;
     if (total > 0) {
       const positiveCount = (processedStats.thumbsup || 0) + 
@@ -106,40 +109,42 @@ async function getComicStats(comicId) {
   }
 }
 
-// Get recent feedback details
-async function getRecentFeedback(comicId, limit = 10) {
+/**
+ * Retrieves recent reaction details for a comic
+ * @param {string} comicId - The comic ID to get reactions for
+ * @param {number} [limit=10] - Maximum number of reaction entries to return
+ * @returns {Promise<Array>} Array of recent reaction entries
+ */
+async function getRecentReactions(comicId, limit = 10) {
   try {
-    // Get recent feedback IDs
-    const feedbackIds = await kv.lrange(`comic:${comicId}:feedback`, 0, limit - 1) || [];
+    const reactionIds = await kv.lrange(`comic:${comicId}:reactions`, 0, limit - 1) || [];
     
-    if (feedbackIds.length === 0) {
+    if (reactionIds.length === 0) {
       return [];
     }
 
-    // Get feedback details
-    const feedbackPromises = feedbackIds.map(async (id) => {
+    const reactionPromises = reactionIds.map(async (id) => {
       try {
-        const feedbackData = await kv.get(`feedback:${id}`);
-        return feedbackData || null;
+        const reactionData = await kv.get(`reaction:${id}`);
+        return reactionData || null;
       } catch (error) {
-        console.error(`Error getting feedback ${id}:`, error);
+        console.error(`Error getting reaction ${id}:`, error);
         return null;
       }
     });
 
-    const feedbackList = await Promise.all(feedbackPromises);
+    const reactionList = await Promise.all(reactionPromises);
     
-    // Filter out null values and return
-    return feedbackList
-      .filter(feedback => feedback !== null)
-      .map(feedback => ({
-        type: feedback.type,
-        timestamp: feedback.timestamp,
-        userId: feedback.userId === 'anonymous' ? null : feedback.userId
+    return reactionList
+      .filter(reaction => reaction !== null)
+      .map(reaction => ({
+        type: reaction.type,
+        timestamp: reaction.timestamp,
+        userId: reaction.userId === 'anonymous' ? null : reaction.userId
       }));
 
   } catch (error) {
-    console.error('Error getting recent feedback:', error);
+    console.error('Error getting recent reactions:', error);
     return [];
   }
 }

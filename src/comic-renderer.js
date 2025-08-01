@@ -47,7 +47,19 @@ export default class ComicRenderer {
             });
             dateElement.textContent = `Generated on ${formattedDate}`;
             dateElement.title = `Generated at ${formattedTime}`;
-            comicWrapper.appendChild(dateElement);
+            
+            // Create container for date and reactions
+            const metaContainer = document.createElement('div');
+            metaContainer.className = 'comic-meta-container';
+            metaContainer.appendChild(dateElement);
+            
+            // Create reaction stats container
+            const reactionStats = document.createElement('div');
+            reactionStats.className = 'comic-reaction-stats';
+            reactionStats.id = 'comicReactionStats';
+            metaContainer.appendChild(reactionStats);
+            
+            comicWrapper.appendChild(metaContainer);
         }
         
         this.container.appendChild(comicWrapper);

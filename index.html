@@ -9,6 +9,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/comic-renderer.css">
+    <link rel="stylesheet" href="css/reactions.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
@@ -16,7 +17,13 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1 class="app-title">🤓 nrrds // a generated comic</h1>
+            <div class="title-container">
+                <div class="emoji-container">🤓</div>
+                <div class="text-container">
+                    <h1 class="app-title">nrrds</h1>
+                    <p class="app-subtitle">a generated comic</p>
+                </div>
+            </div>
         </header>
         <main class="main-content active" id="homePage">
             <div class="comic-container" id="comicContainer">
@@ -45,96 +52,95 @@
             </button>
         </div>
 
-        <div class="feedback-section" id="feedbackSection" style="display: none;">
-                <h3 class="feedback-title">What's your reaction?</h3>
-                <div class="emoji-feedback-grid">
-                    <button class="emoji-btn" data-feedback="thumbsup">
-                        <span class="emoji">👍</span>
-                        <span class="label">Thumbs Up</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="lol">
-                        <span class="emoji">😂</span>
-                        <span class="label">LOL</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="heartwarming">
-                        <span class="emoji">🫶</span>
-                        <span class="label">Heart‑warming</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="awesome">
-                        <span class="emoji">🤩</span>
-                        <span class="label">Awesome</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="inspired">
-                        <span class="emoji">💡</span>
-                        <span class="label">Inspired</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="unique">
-                        <span class="emoji">🦄</span>
-                        <span class="label">Unique</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="mindblown">
-                        <span class="emoji">🤯</span>
-                        <span class="label">Mind‑blown</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="confused">
-                        <span class="emoji">😕</span>
-                        <span class="label">Confused</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="meh">
-                        <span class="emoji">😐</span>
-                        <span class="label">Meh</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="sad">
-                        <span class="emoji">😢</span>
-                        <span class="label">Sad</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="spooked">
-                        <span class="emoji">😱</span>
-                        <span class="label">Spooked</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="grossedout">
-                        <span class="emoji">🤢</span>
-                        <span class="label">Grossed Out</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="cringe">
-                        <span class="emoji">😬</span>
-                        <span class="label">Cringe</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="angry">
-                        <span class="emoji">😠</span>
-                        <span class="label">Angry</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="offended">
-                        <span class="emoji">🚫</span>
-                        <span class="label">Offended</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="celebrating">
-                        <span class="emoji">🥳</span>
-                        <span class="label">Celebrating</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="deep">
-                        <span class="emoji">🤔</span>
-                        <span class="label">Deep</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="facepalm">
-                        <span class="emoji">🤦</span>
-                        <span class="label">Facepalm</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="eyeroll">
-                        <span class="emoji">🙄</span>
-                        <span class="label">Eye‑roll</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="skeptical">
-                        <span class="emoji">🧐</span>
-                        <span class="label">Skeptical</span>
-                    </button>
-                    <button class="emoji-btn" data-feedback="relatable">
-                        <span class="emoji">🙋</span>
-                        <span class="label">Relatable</span>
-                    </button>
-                </div>
-                <div class="reaction-stats" id="feedbackStats"></div>
+        <div class="reactions-container" id="reactionsContainer" style="display: none;">
+            <h3 class="reactions-title" id="reactionsTitle">What's your reaction?</h3>
+            <div class="emoji-reactions-grid" id="reactionsGrid">
+            <button class="emoji-btn" data-reaction="thumbsup">
+                <span class="emoji">👍</span>
+                <span class="label">Thumbs Up</span>
+            </button>
+            <button class="emoji-btn" data-reaction="lol">
+                <span class="emoji">😂</span>
+                <span class="label">LOL</span>
+            </button>
+            <button class="emoji-btn" data-reaction="heartwarming">
+                <span class="emoji">🫶</span>
+                <span class="label">Heart‑warming</span>
+            </button>
+            <button class="emoji-btn" data-reaction="awesome">
+                <span class="emoji">🤩</span>
+                <span class="label">Awesome</span>
+            </button>
+            <button class="emoji-btn" data-reaction="inspired">
+                <span class="emoji">💡</span>
+                <span class="label">Inspired</span>
+            </button>
+            <button class="emoji-btn" data-reaction="unique">
+                <span class="emoji">🦄</span>
+                <span class="label">Unique</span>
+            </button>
+            <button class="emoji-btn" data-reaction="mindblown">
+                <span class="emoji">🤯</span>
+                <span class="label">Mind‑blown</span>
+            </button>
+            <button class="emoji-btn" data-reaction="confused">
+                <span class="emoji">😕</span>
+                <span class="label">Confused</span>
+            </button>
+            <button class="emoji-btn" data-reaction="meh">
+                <span class="emoji">😐</span>
+                <span class="label">Meh</span>
+            </button>
+            <button class="emoji-btn" data-reaction="sad">
+                <span class="emoji">😢</span>
+                <span class="label">Sad</span>
+            </button>
+            <button class="emoji-btn" data-reaction="spooked">
+                <span class="emoji">😱</span>
+                <span class="label">Spooked</span>
+            </button>
+            <button class="emoji-btn" data-reaction="grossedout">
+                <span class="emoji">🤢</span>
+                <span class="label">Grossed Out</span>
+            </button>
+            <button class="emoji-btn" data-reaction="cringe">
+                <span class="emoji">😬</span>
+                <span class="label">Cringe</span>
+            </button>
+            <button class="emoji-btn" data-reaction="angry">
+                <span class="emoji">😠</span>
+                <span class="label">Angry</span>
+            </button>
+            <button class="emoji-btn" data-reaction="offended">
+                <span class="emoji">🚫</span>
+                <span class="label">Offended</span>
+            </button>
+            <button class="emoji-btn" data-reaction="celebrating">
+                <span class="emoji">🥳</span>
+                <span class="label">Celebrating</span>
+            </button>
+            <button class="emoji-btn" data-reaction="deep">
+                <span class="emoji">🤔</span>
+                <span class="label">Deep</span>
+            </button>
+            <button class="emoji-btn" data-reaction="facepalm">
+                <span class="emoji">🤦</span>
+                <span class="label">Facepalm</span>
+            </button>
+            <button class="emoji-btn" data-reaction="eyeroll">
+                <span class="emoji">🙄</span>
+                <span class="label">Eye‑roll</span>
+            </button>
+            <button class="emoji-btn" data-reaction="skeptical">
+                <span class="emoji">🧐</span>
+                <span class="label">Skeptical</span>
+            </button>
+            <button class="emoji-btn" data-reaction="relatable">
+                <span class="emoji">🙋</span>
+                <span class="label">Relatable</span>
+            </button>
             </div>
+        </div>
         </main>
 
         <!-- Past Comics Page -->

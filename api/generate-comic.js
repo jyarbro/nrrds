@@ -605,7 +605,7 @@ CRITICAL RULES:
         content: strictFormatPrompt
       }
     ],
-    temperature: 0.1, // Lower temperature for more consistent formatting
+    temperature: 0.1,
     max_tokens: 1000
   });
 
