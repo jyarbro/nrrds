@@ -264,8 +264,30 @@ export default class ReactionsSystem {
     updateStatsImmediately(reactionType, isDecrement = false) {
         // Get current stats display element dynamically
         const statsElement = document.getElementById('comicReactionStats');
-        if (!statsElement || !statsElement.innerHTML.includes('reaction-stat')) {
-            return; // No stats to update yet
+        if (!statsElement) {
+            return; // No stats container found
+        }
+        
+        // If this is the first reaction on a comic with no existing reactions
+        if (!statsElement.innerHTML.includes('reaction-stat') && !isDecrement) {
+            const reactionData = CONFIG.FEEDBACK_TYPES[reactionType];
+            if (reactionData) {
+                statsElement.innerHTML = `
+                    <div class="reactions-title-small">Fan Reactions</div>
+                    <div class="all-reactions">
+                        <span class="reaction-stat" data-reaction-type="${reactionType}" data-count="1">
+                            <span class="reaction-emoji">${reactionData.emoji}</span>
+                        </span>
+                    </div>
+                `;
+                console.log('🎭 [OPTIMISTIC] Added first reaction:', reactionType, reactionData.emoji);
+            }
+            return;
+        }
+        
+        // If no existing reactions and this is a decrement, nothing to do
+        if (!statsElement.innerHTML.includes('reaction-stat')) {
+            return;
         }
 
         // Find the specific reaction stat element
