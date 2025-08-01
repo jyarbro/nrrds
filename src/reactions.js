@@ -351,10 +351,26 @@ export default class ReactionsSystem {
      */
     async loadReactionStats(comicId) {
         try {
+            console.log('🎭 [REACTIONS DEBUG] Loading stats for comic:', comicId);
+            console.log('🎭 [REACTIONS DEBUG] Environment:', {
+                isDev: location.hostname === 'localhost',
+                hostname: location.hostname,
+                protocol: location.protocol
+            });
+            
             const stats = await comicAPI.getFeedbackStats(comicId);
+            
+            console.log('🎭 [REACTIONS DEBUG] Stats received:', stats);
+            console.log('🎭 [REACTIONS DEBUG] Stats keys:', Object.keys(stats));
+            console.log('🎭 [REACTIONS DEBUG] Stats values:', Object.values(stats));
+            
             this.displayStats(stats);
         } catch (error) {
-            console.error('Failed to load reaction stats:', error);
+            console.error('🎭 [REACTIONS DEBUG] Failed to load reaction stats:', {
+                error: error.message,
+                comicId: comicId,
+                stack: error.stack
+            });
             // Get the current stats element dynamically
             this.reactionStats = document.getElementById('comicReactionStats');
             if (this.reactionStats) {
@@ -369,15 +385,22 @@ export default class ReactionsSystem {
      * @param {Object} stats - The statistics object
      */
     displayStats(stats) {
+        console.log('🎭 [DISPLAY DEBUG] displayStats called with:', stats);
+        
         // Get the current stats element dynamically
         this.reactionStats = document.getElementById('comicReactionStats');
         
         if (!this.reactionStats) {
-            console.warn('Reaction stats container not found');
+            console.warn('🎭 [DISPLAY DEBUG] Reaction stats container not found - checking DOM');
+            console.log('🎭 [DISPLAY DEBUG] Available elements with "reaction" in id:', 
+                Array.from(document.querySelectorAll('[id*="reaction"]')).map(el => el.id));
             return;
         }
         
+        console.log('🎭 [DISPLAY DEBUG] Stats container found:', this.reactionStats);
+        
         if (!stats || Object.keys(stats).length === 0) {
+            console.log('🎭 [DISPLAY DEBUG] No stats provided, showing default message');
             this.reactionStats.innerHTML = '<p>Be the first to share a reaction!</p>';
             return;
         }
@@ -387,7 +410,13 @@ export default class ReactionsSystem {
             .filter(([key, value]) => !excludeFields.includes(key))
             .reduce((sum, [key, count]) => sum + count, 0);
         
+        console.log('🎭 [DISPLAY DEBUG] Total reactions calculated:', totalReactions);
+        console.log('🎭 [DISPLAY DEBUG] Excluded fields:', excludeFields);
+        console.log('🎭 [DISPLAY DEBUG] Non-excluded entries:', 
+            Object.entries(stats).filter(([key, value]) => !excludeFields.includes(key)));
+        
         if (totalReactions === 0) {
+            console.log('🎭 [DISPLAY DEBUG] Total reactions is 0, showing first reaction message');
             this.reactionStats.innerHTML = '<div class="reactions-title-small">Fan Reactions</div><p>Be the first to share a reaction!</p>';
             return;
         }
@@ -406,10 +435,13 @@ export default class ReactionsSystem {
                 return countB - countA;
             });
         
+        console.log('🎭 [DISPLAY DEBUG] All reactions to display:', allReactions);
+        
         if (allReactions.length > 0) {
             statsHTML += '<div class="all-reactions">';
             allReactions.forEach(([type, count]) => {
                 const reactionData = CONFIG.FEEDBACK_TYPES[type];
+                console.log(`🎭 [DISPLAY DEBUG] Processing reaction ${type}:`, { count, reactionData });
                 if (reactionData && count > 0) {
                     statsHTML += `
                         <span class="reaction-stat" data-reaction-type="${type}" data-count="${count}">
@@ -421,7 +453,9 @@ export default class ReactionsSystem {
             statsHTML += '</div>';
         }
         
+        console.log('🎭 [DISPLAY DEBUG] Final HTML being set:', statsHTML);
         this.reactionStats.innerHTML = statsHTML;
+        console.log('🎭 [DISPLAY DEBUG] HTML set complete, final element content:', this.reactionStats.innerHTML);
     }
 
     /**

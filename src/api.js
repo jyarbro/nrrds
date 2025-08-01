@@ -152,13 +152,25 @@ class ComicAPI {
      */
     async getFeedbackStats(comicId) {
         try {
+            console.log('🔍 [DEBUG] Fetching feedback stats for comicId:', comicId);
+            console.log('🔍 [DEBUG] Request URL will be:', `/api/get-feedback?comicId=${comicId}`);
+            
             const data = await this.fetchAPI(`get-feedback?comicId=${comicId}`);
+            
+            console.log('🔍 [DEBUG] Feedback stats response:', data);
+            
             if (!data.success) {
+                console.error('🔍 [DEBUG] API returned success=false:', data.error);
                 throw new Error(data.error || 'Failed to get feedback');
             }
             return data.stats || {};
         } catch (error) {
-            console.error('🔍 Feedback stats error:', error);
+            console.error('🔍 [DEBUG] Feedback stats error details:', {
+                message: error.message,
+                status: error.status,
+                details: error.details,
+                comicId: comicId
+            });
             return {};
         }
     }
