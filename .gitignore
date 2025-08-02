@@ -1,5 +1,7 @@
 .claude/
 .vercel/
+.github/
+.vscode/
 node_modules/
 
 package-lock.json
