@@ -75,7 +75,7 @@ async function getComicStats(comicId) {
     const reactionTypes = [
       'thumbsup', 'lol', 'heartwarming', 'awesome', 'inspired', 'unique',
       'mindblown', 'celebrating', 'deep', 'relatable', 'confused', 'meh',
-      'sad', 'spooked', 'grossedout', 'cringe', 'angry', 'facepalm',
+      'sad', 'spooked', 'gross', 'cringe', 'angry', 'facepalm',
       'eyeroll', 'skeptical', 'offended'
     ];
     reactionTypes.forEach(type => {

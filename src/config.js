@@ -33,7 +33,7 @@ export const CONFIG = {
         spooked: { emoji: '😱', weight: -0.5 },
         
         // Negative (weight -0.8 to -1.5)
-        grossedout: { emoji: '🤢', weight: -0.8 },
+        gross: { emoji: '🤢', weight: -0.8 },
         cringe: { emoji: '😬', weight: -1.0 },
         angry: { emoji: '😠', weight: -1.2 },
         facepalm: { emoji: '🤦', weight: -1.3 },

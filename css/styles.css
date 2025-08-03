@@ -214,7 +214,7 @@ body::before {
     margin: 0 auto;
     background: linear-gradient(145deg, rgba(220, 220, 220, 0.9), rgba(200, 205, 210, 0.9));
     border-radius: 20px;
-    padding: 30px;
+    padding: 20px;
     box-shadow: 
         var(--shadow-lg),
         inset 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -245,7 +245,7 @@ body::before {
     right: 0;
     bottom: 0;
     background: radial-gradient(circle at top center,
-               #ffffff 0%, #e8d5f2 100%);
+                white 0%, var(--comic-purple) 60%);
                pointer-events: none;
     border-radius: 17px;
 }
@@ -834,13 +834,9 @@ body::before {
 }
 
 .comic-date-top {
-    position: absolute;
-    top: -30px;
     right: 0;
     font-size: 0.9rem;
-    color: #666 !important;
-    opacity: 0.8 !important;
-    margin: 0;
+    color: var(--dark-color) !important;
     text-align: right;
     white-space: nowrap;
 }
