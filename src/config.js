@@ -52,6 +52,21 @@ export const CONFIG = {
         EXPLORATION_BOOST: 0.2 // Encourage trying new token combinations
     },
     
+    // Generation temperature settings for exploration vs exploitation
+    GENERATION_TEMPERATURE: {
+        MIN_TEMP: 0.0, // Full exploitation (follow all feedback)
+        MAX_TEMP: 1.0, // Full exploration (ignore all feedback)
+        DEFAULT_TEMP: 0.3, // Balanced default
+        // Temperature profiles
+        EXPLOIT_RANGE: [0.0, 0.3], // Strict adherence to feedback
+        BALANCED_RANGE: [0.3, 0.7], // Mixed approach
+        EXPLORE_RANGE: [0.7, 1.0], // High creativity/exploration
+        // Dynamic calculation parameters
+        NEW_USER_THRESHOLD: 5, // Reactions needed to be considered "experienced"
+        HIGH_TEMP_FREQUENCY: 0.15, // 15% of comics should be high-temperature
+        EXPLORATION_COOLDOWN: 3 // Comics between high-temp generations
+    },
+    
     // UI settings
     UI: {
         LOADING_DELAY: 300 // Minimum loading time for better UX
@@ -69,5 +84,6 @@ Object.freeze(CONFIG);
 Object.freeze(CONFIG.STORAGE_KEYS);
 Object.freeze(CONFIG.FEEDBACK_TYPES);
 Object.freeze(CONFIG.TOKEN_ANALYSIS);
+Object.freeze(CONFIG.GENERATION_TEMPERATURE);
 Object.freeze(CONFIG.UI);
 Object.freeze(CONFIG.ERRORS);

@@ -17,10 +17,24 @@ export default class ComicRenderer {
         comicWrapper.className = 'comic-wrapper';
         comicWrapper.setAttribute('data-comic-id', comic.id);
         if (comic.title) {
+            const titleContainer = document.createElement('div');
+            titleContainer.className = 'comic-title-container';
+            
             const title = document.createElement('h2');
             title.className = 'comic-title';
             title.textContent = comic.title;
-            comicWrapper.appendChild(title);
+            titleContainer.appendChild(title);
+            
+            // Add experimental badge for high-temperature comics
+            if (comic.generationTemperature && comic.generationTemperature > 0.6) {
+                const experimentalBadge = document.createElement('span');
+                experimentalBadge.className = 'experimental-badge';
+                experimentalBadge.textContent = '🧪 experimental';
+                experimentalBadge.title = 'This comic was generated with high creative exploration';
+                titleContainer.appendChild(experimentalBadge);
+            }
+            
+            comicWrapper.appendChild(titleContainer);
         }
         const strip = document.createElement('div');
         // Only use defined panel classes (panels-3, panels-4), otherwise use default
@@ -56,7 +70,17 @@ export default class ComicRenderer {
             });
             dateElement.textContent = `Generated on ${formattedDate} at ${formattedTime}`;
             
-            comicWrapper.appendChild(dateElement);
+            // Add temperature display next to date if available
+            if (comic.generationTemperature !== undefined) {
+                const tempDisplay = this.createTemperatureDisplay(comic.generationTemperature);
+                const dateContainer = document.createElement('div');
+                dateContainer.className = 'comic-date-container';
+                dateContainer.appendChild(dateElement);
+                dateContainer.appendChild(tempDisplay);
+                comicWrapper.appendChild(dateContainer);
+            } else {
+                comicWrapper.appendChild(dateElement);
+            }
         }
         
         comicWrapper.appendChild(strip);
@@ -326,6 +350,61 @@ export default class ComicRenderer {
         bubbleWrapper.style.animationDelay = `${0.3 + (index * 0.1)}s`;
         
         return bubbleWrapper;
+    }
+
+    /**
+     * Create a temperature display widget showing exploration vs exploitation level.
+     * @param {number} temperature - Temperature value between 0.0 and 1.0.
+     * @returns {HTMLElement} Temperature display element.
+     */
+    createTemperatureDisplay(temperature) {
+        const tempContainer = document.createElement('div');
+        tempContainer.className = 'temperature-display';
+        
+        // Create thermometer icon
+        const thermometer = document.createElement('div');
+        thermometer.className = 'thermometer-icon';
+        
+        // Temperature fill level (0-100%)
+        const fillLevel = Math.round(temperature * 100);
+        
+        // Color based on temperature: blue (cold/exploitation) → yellow → red (hot/exploration)
+        let fillColor;
+        if (temperature < 0.3) {
+            // Cold: blue to light blue
+            fillColor = `hsl(210, 80%, ${60 + temperature * 60}%)`;
+        } else if (temperature < 0.7) {
+            // Warm: light blue to yellow
+            const progress = (temperature - 0.3) / 0.4;
+            fillColor = `hsl(${210 - progress * 150}, 80%, 60%)`;
+        } else {
+            // Hot: yellow to red
+            const progress = (temperature - 0.7) / 0.3;
+            fillColor = `hsl(${60 - progress * 60}, 80%, 60%)`;
+        }
+        
+        // Create thermometer visual
+        thermometer.innerHTML = `
+            <div class="thermometer-bulb"></div>
+            <div class="thermometer-tube">
+                <div class="thermometer-fill" style="height: ${fillLevel}%; background-color: ${fillColor};"></div>
+            </div>
+        `;
+        
+        // Create tooltip explaining temperature
+        let tooltipText;
+        if (temperature < 0.3) {
+            tooltipText = `🎯 Exploitation Mode (${(temperature * 100).toFixed(0)}%)\nFollowing your preferences closely`;
+        } else if (temperature < 0.7) {
+            tooltipText = `⚖️ Balanced Mode (${(temperature * 100).toFixed(0)}%)\nMixing preferences with creativity`;
+        } else {
+            tooltipText = `🎨 Exploration Mode (${(temperature * 100).toFixed(0)}%)\nHigh creative freedom, ignoring most preferences`;
+        }
+        
+        thermometer.title = tooltipText;
+        tempContainer.appendChild(thermometer);
+        
+        return tempContainer;
     }
 
     /**

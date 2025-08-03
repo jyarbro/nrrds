@@ -77,7 +77,8 @@ class ComicAPI {
                         encourageTokens: preferences.encourageTokens || [],
                         avoidConcepts: preferences.avoidConcepts || [],
                         encourageConcepts: preferences.encourageConcepts || [],
-                        feedbackWeights: preferences.feedbackWeights || {}
+                        feedbackWeights: preferences.reactionWeights || {},
+                        generationTemperature: preferences.generationTemperature || 0.3
                     },
                     timestamp: new Date().toISOString()
                 })

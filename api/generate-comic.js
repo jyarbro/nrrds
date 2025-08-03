@@ -103,6 +103,7 @@ export default async function handler(req, res) {
       userId, 
       preferences: Object.keys(preferences),
       tokenGuidanceKeys: Object.keys(tokenGuidance),
+      generationTemperature: tokenGuidance.generationTemperature,
       timestamp,
       hasPreferences: Object.keys(preferences).length > 0,
       hasTokenGuidance: Object.keys(tokenGuidance).length > 0
@@ -123,7 +124,7 @@ export default async function handler(req, res) {
     });
     
     log('🔀 Combining user and global guidance...');
-    // Merge with user's personal token preferences
+    // Merge with user's personal token preferences (including temperature)
     const combinedGuidance = await combineTokenGuidance(tokenGuidance, globalTokenGuidance, userId);
     log('✅ Combined guidance ready:', {
       totalAvoidTokens: combinedGuidance.avoidTokens?.length || 0,
@@ -333,28 +334,42 @@ async function getOverusedThemes() {
 // Combine personal and global token guidance
 async function combineTokenGuidance(personalGuidance, globalGuidance, userId) {
   try {
+    const temperature = personalGuidance.generationTemperature || 0.3;
+    const temperatureDampening = 1.0 - temperature;
+    
+    log('🌡️ [BACKEND] Processing with temperature:', temperature, 'dampening:', temperatureDampening);
+    
     // Personal preferences take precedence, global fills in gaps
+    // Temperature already applied in frontend, but we preserve it for metadata
     const combined = {
       avoidTokens: [...(personalGuidance.avoidTokens || [])],
       encourageTokens: [...(personalGuidance.encourageTokens || [])],
       avoidConcepts: [...(personalGuidance.avoidConcepts || [])],
       encourageConcepts: [...(personalGuidance.encourageConcepts || [])],
       tokenWeights: { ...(personalGuidance.tokenWeights || {}) },
-      conceptWeights: { ...(personalGuidance.conceptWeights || {}) }
+      conceptWeights: { ...(personalGuidance.conceptWeights || {}) },
+      generationTemperature: temperature
     };
     
     // Add global guidance for tokens not in personal preferences
+    // Apply temperature dampening to global guidance as well
     globalGuidance.encourageTokens?.forEach(({ token, weight }) => {
       if (!combined.tokenWeights[token] && !combined.avoidTokens.includes(token)) {
-        combined.encourageTokens.push(token);
-        combined.tokenWeights[token] = weight * 0.5; // Reduce global influence
+        const adjustedWeight = weight * 0.5 * temperatureDampening; // Reduce global influence and apply temperature
+        if (Math.abs(adjustedWeight) > 0.1) { // Only include if weight is still significant
+          combined.encourageTokens.push(token);
+          combined.tokenWeights[token] = adjustedWeight;
+        }
       }
     });
     
     globalGuidance.avoidTokens?.forEach(({ token, weight }) => {
       if (!combined.tokenWeights[token] && !combined.encourageTokens.includes(token)) {
-        combined.avoidTokens.push(token);
-        combined.tokenWeights[token] = -weight * 0.5; // Reduce global influence
+        const adjustedWeight = -weight * 0.5 * temperatureDampening; // Reduce global influence and apply temperature
+        if (Math.abs(adjustedWeight) > 0.1) { // Only include if weight is still significant
+          combined.avoidTokens.push(token);
+          combined.tokenWeights[token] = adjustedWeight;
+        }
       }
     });
     
@@ -893,7 +908,8 @@ async function generateComicWithAI(comicId, guidance) {
         encouragedConcepts: guidance.encourageConcepts || []
       },
       timestamp: currentDate.toISOString(),
-      createdAt: currentDate.toISOString()
+      createdAt: currentDate.toISOString(),
+      generationTemperature: guidance.generationTemperature || 0.3
     };
 
     // Pre-generate URL navigation data (using comic ID as slug)

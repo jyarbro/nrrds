@@ -605,6 +605,72 @@ export default class ReactionsSystem {
     }
 
     /**
+     * Calculate generation temperature based on user's reaction history and system needs
+     * @returns {number} Temperature value between 0.0 (exploit) and 1.0 (explore)
+     */
+    calculateGenerationTemperature() {
+        try {
+            const prefs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.USER_PREFERENCES) || '{}');
+            const tempConfig = CONFIG.GENERATION_TEMPERATURE;
+            
+            // Calculate total user reactions
+            const totalReactions = prefs.reactionCounts ? 
+                Object.values(prefs.reactionCounts).reduce((sum, count) => sum + count, 0) : 0;
+            
+            // New users get higher temperature (more exploration)
+            const isNewUser = totalReactions < tempConfig.NEW_USER_THRESHOLD;
+            
+            // Get user's last temperature and generation count for cooldown
+            const lastGenerationTemp = prefs.lastGenerationTemperature || 0;
+            const generationsSinceHighTemp = prefs.generationsSinceHighTemp || 0;
+            
+            // Random exploration factor
+            const randomFactor = Math.random();
+            
+            // Base temperature calculation
+            let temperature;
+            
+            if (isNewUser) {
+                // New users: bias toward exploration (0.4-0.8 range)
+                temperature = 0.4 + (randomFactor * 0.4);
+            } else {
+                // Experienced users: check if it's time for high-temperature exploration
+                const shouldExplore = (
+                    randomFactor < tempConfig.HIGH_TEMP_FREQUENCY || 
+                    generationsSinceHighTemp >= tempConfig.EXPLORATION_COOLDOWN
+                );
+                
+                if (shouldExplore) {
+                    // High exploration phase
+                    temperature = tempConfig.EXPLORE_RANGE[0] + 
+                        (randomFactor * (tempConfig.EXPLORE_RANGE[1] - tempConfig.EXPLORE_RANGE[0]));
+                } else {
+                    // Normal exploitation phase
+                    temperature = tempConfig.EXPLOIT_RANGE[0] + 
+                        (randomFactor * (tempConfig.BALANCED_RANGE[1] - tempConfig.EXPLOIT_RANGE[0]));
+                }
+            }
+            
+            // Ensure temperature is within bounds
+            temperature = Math.max(tempConfig.MIN_TEMP, Math.min(tempConfig.MAX_TEMP, temperature));
+            
+            // Store temperature info for next calculation
+            prefs.lastGenerationTemperature = temperature;
+            prefs.generationsSinceHighTemp = temperature > tempConfig.BALANCED_RANGE[1] ? 0 : 
+                (prefs.generationsSinceHighTemp || 0) + 1;
+            
+            localStorage.setItem(CONFIG.STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(prefs));
+            
+            console.log(`🌡️ [TEMPERATURE] Calculated: ${temperature.toFixed(3)} (new user: ${isNewUser}, total reactions: ${totalReactions})`);
+            return temperature;
+            
+        } catch (error) {
+            console.error('Failed to calculate generation temperature:', error);
+            return CONFIG.GENERATION_TEMPERATURE.DEFAULT_TEMP;
+        }
+    }
+
+    /**
      * Get user preferences for comic generation
      * @returns {Object} User preferences object with feedback weights and token/concept preferences
      */
@@ -612,43 +678,66 @@ export default class ReactionsSystem {
         try {
             const prefs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.USER_PREFERENCES) || '{}');
             
+            // Calculate current generation temperature
+            const temperature = this.calculateGenerationTemperature();
+            
+            // Temperature dampening factor: higher temp = less weight on preferences
+            const temperatureDampening = 1.0 - temperature;
+            
             const preferences = {
-                reactionWeights: prefs.preferenceWeights || {},
+                reactionWeights: {},
                 tokenWeights: {},
                 conceptWeights: {},
                 avoidTokens: [],
                 encourageTokens: [],
+                encourageConcepts: [],
                 avoidConcepts: [],
-                encourageConcepts: []
+                generationTemperature: temperature
             };
             
+            // Apply temperature dampening to reaction weights
+            if (prefs.preferenceWeights) {
+                Object.entries(prefs.preferenceWeights).forEach(([type, weight]) => {
+                    preferences.reactionWeights[type] = weight * temperatureDampening;
+                });
+            }
+            
+            // Apply temperature dampening to token preferences
             if (prefs.tokenPreferences) {
                 Object.entries(prefs.tokenPreferences).forEach(([token, data]) => {
                     if (data.count >= CONFIG.TOKEN_ANALYSIS.MIN_TOKEN_FREQUENCY) {
-                        preferences.tokenWeights[token] = data.weight;
+                        const adjustedWeight = data.weight * temperatureDampening;
+                        preferences.tokenWeights[token] = adjustedWeight;
                         
-                        if (data.weight < -0.5) {
+                        // Only add to avoid/encourage lists if weight is still significant after temperature adjustment
+                        if (adjustedWeight < -0.5) {
                             preferences.avoidTokens.push(token);
-                        } else if (data.weight > 0.5) {
+                        } else if (adjustedWeight > 0.5) {
                             preferences.encourageTokens.push(token);
                         }
                     }
                 });
             }
             
+            // Apply temperature dampening to concept preferences
             if (prefs.conceptPreferences) {
                 Object.entries(prefs.conceptPreferences).forEach(([concept, data]) => {
                     if (data.count >= CONFIG.TOKEN_ANALYSIS.MIN_TOKEN_FREQUENCY) {
-                        preferences.conceptWeights[concept] = data.weight;
+                        const adjustedWeight = data.weight * temperatureDampening;
+                        preferences.conceptWeights[concept] = adjustedWeight;
                         
-                        if (data.weight < -0.5) {
+                        // Only add to avoid/encourage lists if weight is still significant after temperature adjustment
+                        if (adjustedWeight < -0.5) {
                             preferences.avoidConcepts.push(concept);
-                        } else if (data.weight > 0.5) {
+                        } else if (adjustedWeight > 0.5) {
                             preferences.encourageConcepts.push(concept);
                         }
                     }
                 });
             }
+            
+            console.log(`🌡️ [PREFERENCES] Applied temperature ${temperature.toFixed(3)} (dampening: ${temperatureDampening.toFixed(3)}) to preferences`);
+            console.log(`🌡️ [PREFERENCES] Adjusted weights - Tokens: ${Object.keys(preferences.tokenWeights).length}, Concepts: ${Object.keys(preferences.conceptWeights).length}`);
             
             return preferences;
         } catch (error) {

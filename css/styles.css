@@ -802,15 +802,99 @@ body::before {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
+.comic-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
 .comic-title {
     font-family: 'Bangers', cursive;
     font-size: 2.5rem;
     text-align: center;
-    margin-bottom: 25px;
+    margin: 0;
     color: #333333;
     text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
     z-index: 10;
     position: relative;
+}
+
+.experimental-badge {
+    background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: help;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+.comic-date-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.temperature-display {
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.temperature-display:hover {
+    opacity: 1;
+}
+
+.thermometer-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: help;
+    width: 20px;
+    height: 24px;
+}
+
+.thermometer-bulb {
+    width: 8px;
+    height: 8px;
+    background-color: #666;
+    border-radius: 50%;
+    margin-bottom: 1px;
+    z-index: 2;
+}
+
+.thermometer-tube {
+    width: 4px;
+    height: 14px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border: 1px solid #666;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+}
+
+.thermometer-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    transition: height 0.3s ease, background-color 0.3s ease;
+    border-radius: 1px;
+}
+
+@keyframes subtle-pulse {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
 }
 
 .comic-meta-container {
@@ -2072,15 +2156,49 @@ body::before {
         font-size: 0.8rem;
     }     
     
+    .comic-title-container {
+        margin-bottom: 20px;
+        gap: 10px;
+    }
+    
     .comic-title {
         background: radial-gradient(circle at top center, #c8a6d8 0%, #9B59B6 40%, #7B2C85 100%);
         color: white;
         border-radius: 15px;
         border: 3px solid var(--border-color);
         padding: 15px 20px;
-        margin-bottom: 25px;
+        margin: 0;
         text-shadow: 0 3px 0 rgba(0, 0, 0, 0.6);
         box-shadow: var(--shadow), inset 0 2px 0 rgba(255, 255, 255, 0.3);
+    }
+    
+    .experimental-badge {
+        font-size: 0.6rem;
+        padding: 3px 6px;
+        border-radius: 8px;
+    }
+    
+    .comic-date-container {
+        gap: 8px;
+    }
+    
+    .temperature-display {
+        opacity: 0.8;
+    }
+    
+    .thermometer-icon {
+        width: 16px;
+        height: 20px;
+    }
+    
+    .thermometer-bulb {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .thermometer-tube {
+        width: 3px;
+        height: 12px;
     }
 
     .comic-meta-container {
