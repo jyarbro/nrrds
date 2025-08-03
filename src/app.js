@@ -741,11 +741,6 @@ class ComicApp {
             return;
         }
 
-        // Confirm migration
-        if (!confirm('This will migrate all recent comics to ensure consistent character colors. Continue?')) {
-            return;
-        }
-
         this.isLoading = true;
         this.migrationBtn.textContent = '🔄 Migrating...';
         this.migrationBtn.disabled = true;
@@ -761,12 +756,7 @@ class ComicApp {
             const result = await response.json();
 
             if (result.success) {
-                alert(`Migration completed!\n\nTotal comics: ${result.totalComics}\nMigrated: ${result.migrated}\nErrors: ${result.errors || 0}`);
-                
-                // Refresh current comic if we have one loaded
-                if (this.comics.length > 0) {
-                    await this.loadComicFromURL();
-                }
+                alert(`Done`);
             } else {
                 throw new Error(result.error || 'Migration failed');
             }
