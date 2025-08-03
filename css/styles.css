@@ -82,6 +82,18 @@ TABLE OF CONTENTS:
     --comic-orange: #F39C12;
     --comic-pink: #E91E63;
     --glow-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
+    
+    /* Character colors */
+    --character-1-color: #45a049;
+    --character-2-color: #1976D2;
+    --character-3-color: #F57C00;
+    --character-4-color: #7B1FA2;
+    --character-5-color: #D84315;
+    --character-1-gradient-start: #4CAF50;
+    --character-2-gradient-start: #2196F3;
+    --character-3-gradient-start: #FF9800;
+    --character-4-gradient-start: #9C27B0;
+    --character-5-gradient-start: #FF5722;
 }
 
 body {
@@ -963,11 +975,11 @@ body::before {
     background: linear-gradient(45deg, #4CAF50, #45a049);
 }
 
-.character-style-1 { background: linear-gradient(45deg, #4CAF50, #45a049); }
-.character-style-2 { background: linear-gradient(45deg, #2196F3, #1976D2); }
-.character-style-3 { background: linear-gradient(45deg, #FF9800, #F57C00); }
-.character-style-4 { background: linear-gradient(45deg, #9C27B0, #7B1FA2); }
-.character-style-5 { background: linear-gradient(45deg, #FF5722, #D84315); }
+.character-style-1 { background: linear-gradient(45deg, var(--character-1-gradient-start), var(--character-1-color)); }
+.character-style-2 { background: linear-gradient(45deg, var(--character-2-gradient-start), var(--character-2-color)); }
+.character-style-3 { background: linear-gradient(45deg, var(--character-3-gradient-start), var(--character-3-color)); }
+.character-style-4 { background: linear-gradient(45deg, var(--character-4-gradient-start), var(--character-4-color)); }
+.character-style-5 { background: linear-gradient(45deg, var(--character-5-gradient-start), var(--character-5-color)); }
 
 .dialogue-container {
     flex-shrink: 0;
@@ -1078,23 +1090,44 @@ body::before {
 
 /* Character-specific arrow colors */
 .speech-bubble.character-1-arrow::after {
-    border-bottom-color: #45a049;
+    border-bottom-color: var(--character-1-color);
 }
 
 .speech-bubble.character-2-arrow::after {
-    border-bottom-color: #1976D2;
+    border-bottom-color: var(--character-2-color);
 }
 
 .speech-bubble.character-3-arrow::after {
-    border-bottom-color: #F57C00;
+    border-bottom-color: var(--character-3-color);
 }
 
 .speech-bubble.character-4-arrow::after {
-    border-bottom-color: #7B1FA2;
+    border-bottom-color: var(--character-4-color);
 }
 
 .speech-bubble.character-5-arrow::after {
-    border-bottom-color: #D84315;
+    border-bottom-color: var(--character-5-color);
+}
+
+/* Character-specific inner hard shadows for speech bubbles */
+.speech-bubble.character-1-arrow {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-1-color) 60%, transparent);
+}
+
+.speech-bubble.character-2-arrow {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-2-color) 60%, transparent);
+}
+
+.speech-bubble.character-3-arrow {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-3-color) 60%, transparent);
+}
+
+.speech-bubble.character-4-arrow {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-4-color) 60%, transparent);
+}
+
+.speech-bubble.character-5-arrow {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-5-color) 60%, transparent);
 }
 
 .thought-bubble {
@@ -1116,6 +1149,27 @@ body::before {
     bottom: -20px;
     left: 30px;
     font-size: 20px;
+}
+
+/* Character-specific inner hard shadows for thought bubbles */
+.thought-bubble.character-1-thought {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-1-color) 60%, transparent);
+}
+
+.thought-bubble.character-2-thought {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-2-color) 60%, transparent);
+}
+
+.thought-bubble.character-3-thought {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-3-color) 60%, transparent);
+}
+
+.thought-bubble.character-4-thought {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-4-color) 60%, transparent);
+}
+
+.thought-bubble.character-5-thought {
+    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-5-color) 60%, transparent);
 }
 
 .bubble-angry {

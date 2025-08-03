@@ -269,41 +269,47 @@ export default class ComicRenderer {
             bubble.setAttribute('data-speaker', speaker);
         }
         
-        // Add arrow positioning for speech bubbles based on speaker position
-        if (type === 'speech' && hasMultipleCharacters && speaker && characters) {
+        // Add character-specific styling and positioning for speech and thought bubbles
+        if (hasMultipleCharacters && speaker && characters) {
             const speakerIndex = characters.findIndex(char => char.name === speaker);
             const totalCharacters = characters.length;
             
             if (speakerIndex !== -1) {
                 const speakerCharacter = characters[speakerIndex];
                 
-                // Add positioning class
-                if (totalCharacters === 2) {
-                    bubble.classList.add(speakerIndex === 0 ? 'arrow-left' : 'arrow-right');
-                } else if (totalCharacters === 3) {
-                    if (speakerIndex === 0) {
-                        bubble.classList.add('arrow-left');
-                    } else if (speakerIndex === 1) {
-                        bubble.classList.add('arrow-center');
-                    } else {
-                        bubble.classList.add('arrow-right');
-                    }
-                } else if (totalCharacters > 3) {
-                    // For more than 3 characters, distribute evenly
-                    const position = speakerIndex / (totalCharacters - 1);
-                    if (position < 0.33) {
-                        bubble.classList.add('arrow-left');
-                    } else if (position > 0.67) {
-                        bubble.classList.add('arrow-right');
-                    } else {
-                        bubble.classList.add('arrow-center');
+                // Add character-specific styling for all bubble types
+                if (speakerCharacter && speakerCharacter.style) {
+                    const styleNumber = Math.max(1, Math.min(5, parseInt(speakerCharacter.style) || 1));
+                    if (type === 'speech') {
+                        bubble.classList.add(`character-${styleNumber}-arrow`);
+                    } else if (type === 'thought') {
+                        bubble.classList.add(`character-${styleNumber}-thought`);
                     }
                 }
                 
-                // Add character-specific arrow color
-                if (speakerCharacter && speakerCharacter.style) {
-                    const styleNumber = Math.max(1, Math.min(5, parseInt(speakerCharacter.style) || 1));
-                    bubble.classList.add(`character-${styleNumber}-arrow`);
+                // Add arrow positioning for speech bubbles
+                if (type === 'speech') {
+                    if (totalCharacters === 2) {
+                        bubble.classList.add(speakerIndex === 0 ? 'arrow-left' : 'arrow-right');
+                    } else if (totalCharacters === 3) {
+                        if (speakerIndex === 0) {
+                            bubble.classList.add('arrow-left');
+                        } else if (speakerIndex === 1) {
+                            bubble.classList.add('arrow-center');
+                        } else {
+                            bubble.classList.add('arrow-right');
+                        }
+                    } else if (totalCharacters > 3) {
+                        // For more than 3 characters, distribute evenly
+                        const position = speakerIndex / (totalCharacters - 1);
+                        if (position < 0.33) {
+                            bubble.classList.add('arrow-left');
+                        } else if (position > 0.67) {
+                            bubble.classList.add('arrow-right');
+                        } else {
+                            bubble.classList.add('arrow-center');
+                        }
+                    }
                 }
             }
         }
