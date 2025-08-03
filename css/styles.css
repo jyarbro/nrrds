@@ -1955,7 +1955,7 @@ body::before {
     }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 750px) {
     .app-title {
         font-size: 2.5rem;
     }
