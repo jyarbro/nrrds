@@ -1123,12 +1123,12 @@ body::before {
 
 .speech-bubble {
     background: white;
-    border: 2px solid var(--border-color);
     border-radius: 20px;
     padding: 12px 16px;
     margin: 8px 10px;
     position: relative;
     font-size: 14px;
+    font-weight: bold;
     line-height: 1.4;
     box-shadow: var(--shadow);
 }
@@ -1148,21 +1148,16 @@ body::before {
 .speech-bubble::before {
     content: '';
     position: absolute;
-    top: -7px;
+    top: -5px;
     left: 31px;
     width: 0;
     height: 0;
     border-left: 9px solid transparent;
     border-right: 9px solid transparent;
-    border-bottom: 9px solid white;
 }
 
 .speech-bubble.arrow-left::after {
     left: 20%;
-}
-
-.speech-bubble.arrow-left::before {
-    left: calc(20% + 1px);
 }
 
 .speech-bubble.arrow-center::after {
@@ -1170,17 +1165,7 @@ body::before {
     transform: translateX(-50%);
 }
 
-.speech-bubble.arrow-center::before {
-    left: 50%;
-    transform: translateX(-50%);
-}
-
 .speech-bubble.arrow-right::after {
-    left: 80%;
-    transform: translateX(-100%);
-}
-
-.speech-bubble.arrow-right::before {
     left: 80%;
     transform: translateX(-100%);
 }
@@ -1208,23 +1193,23 @@ body::before {
 
 /* Character-specific inner hard shadows for speech bubbles */
 .speech-bubble.character-1-arrow {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-1-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 3px var(--character-1-color);
 }
 
 .speech-bubble.character-2-arrow {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-2-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 3px var(--character-2-color);
 }
 
 .speech-bubble.character-3-arrow {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-3-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 3px var(--character-3-color);
 }
 
 .speech-bubble.character-4-arrow {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-4-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 3px var(--character-4-color);
 }
 
 .speech-bubble.character-5-arrow {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-5-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 3px var(--character-5-color);
 }
 
 .thought-bubble {
@@ -1235,6 +1220,7 @@ body::before {
     margin: 8px 10px;
     font-size: 13px;
     font-style: italic;
+    font-weight: bold;
     line-height: 1.4;
     position: relative;
     box-shadow: var(--shadow);
@@ -1250,30 +1236,28 @@ body::before {
 
 /* Character-specific inner hard shadows for thought bubbles */
 .thought-bubble.character-1-thought {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-1-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 2px color-mix(in srgb, var(--character-1-color) 60%, transparent);
 }
 
 .thought-bubble.character-2-thought {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-2-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 2px color-mix(in srgb, var(--character-2-color) 60%, transparent);
 }
 
 .thought-bubble.character-3-thought {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-3-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 2px color-mix(in srgb, var(--character-3-color) 60%, transparent);
 }
 
 .thought-bubble.character-4-thought {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-4-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 2px color-mix(in srgb, var(--character-4-color) 60%, transparent);
 }
 
 .thought-bubble.character-5-thought {
-    box-shadow: var(--shadow), inset 0 0 8px color-mix(in srgb, var(--character-5-color) 60%, transparent);
+    box-shadow: var(--shadow), inset 0 0 0 2px color-mix(in srgb, var(--character-5-color) 60%, transparent);
 }
 
 .bubble-angry {
     background: #ffebee;
-    border-color: #f44336;
     color: #d32f2f;
-    font-weight: bold;
 }
 
 .bubble-angry::after {
