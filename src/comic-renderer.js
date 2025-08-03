@@ -23,7 +23,16 @@ export default class ComicRenderer {
             comicWrapper.appendChild(title);
         }
         const strip = document.createElement('div');
-        strip.className = `comic-strip panels-${comic.panels.length}`;
+        // Only use defined panel classes (panels-3, panels-4), otherwise use default
+        const panelCount = comic.panels.length;
+        let panelClass = 'comic-strip';
+        if (panelCount === 3) {
+            panelClass += ' panels-3';
+        } else if (panelCount === 4) {
+            panelClass += ' panels-4';
+        }
+        // For all other panel counts (1, 2, 5+), use the default responsive grid
+        strip.className = panelClass;
         comic.panels.forEach((panel, index) => {
             const panelElement = this.createPanel(panel, index);
             strip.appendChild(panelElement);
@@ -144,10 +153,16 @@ export default class ComicRenderer {
         const character = document.createElement('div');
         character.className = 'character';
         if (characterData.style) {
-            character.classList.add(`character-style-${characterData.style}`);
+            // Cap character styles to defined range (1-5)
+            const styleNumber = Math.max(1, Math.min(5, parseInt(characterData.style) || 1));
+            character.classList.add(`character-style-${styleNumber}`);
         }
         if (characterData.effect) {
-            character.classList.add(`effect-${characterData.effect}`);
+            // Only use defined effects: shake and bounce
+            const definedEffects = ['shake', 'bounce'];
+            if (definedEffects.includes(characterData.effect)) {
+                character.classList.add(`effect-${characterData.effect}`);
+            }
         }
         if (characterData.emoji) {
             character.textContent = characterData.emoji;
@@ -155,6 +170,8 @@ export default class ComicRenderer {
             character.textContent = '😊';
         }
         
+        wrapper.appendChild(character);
+
         // Add nameplate if character has a name
         if (characterData.name) {
             const nameplate = document.createElement('div');
@@ -163,7 +180,6 @@ export default class ComicRenderer {
             wrapper.appendChild(nameplate);
         }
         
-        wrapper.appendChild(character);
         return wrapper;
     }
 
@@ -176,10 +192,16 @@ export default class ComicRenderer {
         const character = document.createElement('div');
         character.className = 'character';
         if (characterData.style) {
-            character.classList.add(`character-style-${characterData.style}`);
+            // Cap character styles to defined range (1-5)
+            const styleNumber = Math.max(1, Math.min(5, parseInt(characterData.style) || 1));
+            character.classList.add(`character-style-${styleNumber}`);
         }
         if (characterData.effect) {
-            character.classList.add(`effect-${characterData.effect}`);
+            // Only use defined effects: shake and bounce
+            const definedEffects = ['shake', 'bounce'];
+            if (definedEffects.includes(characterData.effect)) {
+                character.classList.add(`effect-${characterData.effect}`);
+            }
         }
         if (characterData.emoji) {
             character.textContent = characterData.emoji;
@@ -237,7 +259,11 @@ export default class ComicRenderer {
                 bubble.className = 'speech-bubble';
         }
         if (style) {
-            bubble.classList.add(`bubble-${style}`);
+            // Only use defined bubble styles: angry
+            const definedBubbleStyles = ['angry'];
+            if (definedBubbleStyles.includes(style)) {
+                bubble.classList.add(`bubble-${style}`);
+            }
         }
         if (speaker) {
             bubble.setAttribute('data-speaker', speaker);
