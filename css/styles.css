@@ -739,6 +739,11 @@ body::before {
     margin-bottom: 10px;
 }
 
+.comic-wrapper {
+    position: relative;
+    padding-top: 35px;
+}
+
 .welcome-message {
     text-align: center;
     padding: 60px 20px;
@@ -826,6 +831,18 @@ body::before {
     position: relative;
     z-index: 10;
     display: block;
+}
+
+.comic-date-top {
+    position: absolute;
+    top: -30px;
+    right: 0;
+    font-size: 0.9rem;
+    color: #666 !important;
+    opacity: 0.8 !important;
+    margin: 0;
+    text-align: right;
+    white-space: nowrap;
 }
 
 .comic-reaction-stats {

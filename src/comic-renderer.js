@@ -37,32 +37,35 @@ export default class ComicRenderer {
             const panelElement = this.createPanel(panel, index);
             strip.appendChild(panelElement);
         });
-        comicWrapper.appendChild(strip);
-        
-        // Add generated date below the comic
+        // Add generated date to top right above the comic
         if (comic.createdAt || comic.timestamp) {
             const dateElement = document.createElement('div');
-            dateElement.className = 'comic-date';
+            dateElement.className = 'comic-date comic-date-top';
             const date = new Date(comic.createdAt || comic.timestamp);
-            const formattedDate = date.toLocaleDateString('en-US', {
+            const formattedDate = date.toLocaleDateString(undefined, {
                 year: 'numeric',
                 month: 'long',
-                day: 'numeric'
+                day: 'numeric',
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
             });
-            const formattedTime = date.toLocaleTimeString('en-US', {
-                hour: '2-digit',
+            const formattedTime = date.toLocaleTimeString(undefined, {
+                hour: 'numeric',
                 minute: '2-digit',
-                second: '2-digit'
+                hour12: true,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
             });
-            dateElement.textContent = `Generated on ${formattedDate}`;
-            dateElement.title = `Generated at ${formattedTime}`;
+            dateElement.textContent = `Generated on ${formattedDate} at ${formattedTime}`;
             
-            // Create container for date and reactions
+            comicWrapper.appendChild(dateElement);
+        }
+        
+        comicWrapper.appendChild(strip);
+        
+        // Add reaction stats container below the comic
+        if (comic.createdAt || comic.timestamp) {
             const metaContainer = document.createElement('div');
             metaContainer.className = 'comic-meta-container';
-            metaContainer.appendChild(dateElement);
             
-            // Create reaction stats container
             const reactionStats = document.createElement('div');
             reactionStats.className = 'comic-reaction-stats';
             reactionStats.id = 'comicReactionStats';
