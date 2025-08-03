@@ -3,6 +3,63 @@ import OpenAI from 'openai';
 
 const log = (...args) => console.log('[GENERATE-COMIC]', ...args);
 
+// Generate URL-safe comic ID from title and date
+function generateURLSafeComicId(title, date = new Date()) {
+  if (!title) {
+    // Fallback to timestamp-based ID if no title
+    return `comic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  
+  // Create URL-safe slug from title
+  const titleSlug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+    .slice(0, 50); // Limit length
+  
+  // Format date as YYYY-MM-DD
+  const dateStr = date.toISOString().split('T')[0];
+  
+  // Combine title slug and date
+  const comicId = `${titleSlug}-${dateStr}`;
+  
+  // Ensure we have a valid ID
+  if (comicId.length < 3 || comicId === `-${dateStr}`) {
+    // Fallback if title processing resulted in empty slug
+    return `comic-${dateStr}-${Math.random().toString(36).substr(2, 6)}`;
+  }
+  
+  return comicId;
+}
+
+// Generate unique URL-safe comic ID, checking for conflicts
+async function generateUniqueComicId(title, date = new Date()) {
+  const baseId = generateURLSafeComicId(title, date);
+  
+  // Check if the ID already exists
+  const existingComic = await kv.get(`comic:${baseId}`);
+  if (!existingComic) {
+    return baseId;
+  }
+  
+  // ID exists, add a suffix
+  let counter = 1;
+  let uniqueId;
+  do {
+    uniqueId = `${baseId}-${counter}`;
+    const exists = await kv.get(`comic:${uniqueId}`);
+    if (!exists) {
+      return uniqueId;
+    }
+    counter++;
+  } while (counter <= 10); // Limit attempts to prevent infinite loop
+  
+  // If we still have conflicts after 10 attempts, use timestamp fallback
+  return `${baseId}-${Date.now()}`;
+}
+
 // Initialize OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -51,9 +108,9 @@ export default async function handler(req, res) {
       hasTokenGuidance: Object.keys(tokenGuidance).length > 0
     });
 
-    // Generate comic ID
-    const comicId = `comic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    log('🆔 Generated comic ID:', comicId, 'for request:', requestId);
+    // Generate temporary comic ID for processing
+    const tempComicId = `comic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    log('🆔 Generated temporary comic ID:', tempComicId, 'for request:', requestId);
 
     log('🔄 Getting global token guidance...');
     // Get aggregated token guidance from global feedback
@@ -77,7 +134,7 @@ export default async function handler(req, res) {
 
     log('🎨 Starting AI comic generation...');
     // Generate comic using AI with token guidance
-    const comic = await generateComicWithAI(comicId, combinedGuidance);
+    const comic = await generateComicWithAI(tempComicId, combinedGuidance);
 
     log('💾 Saving comic to Redis...');
     // Save comic to Redis
@@ -473,6 +530,34 @@ Be extremely careful about character consistency and dialogue attribution.`;
   return analysis;
 }
 
+// Generate character styles for a comic (per-comic assignment)
+function assignCharacterStyles(parsedComic) {
+  // Collect all unique character names from all panels
+  const allCharacterNames = new Set();
+  
+  parsedComic.panels.forEach(panel => {
+    if (panel.characters && Array.isArray(panel.characters)) {
+      panel.characters.forEach(character => {
+        if (character.name) {
+          allCharacterNames.add(character.name);
+        }
+      });
+    }
+  });
+
+  // Convert to array and sort for consistent ordering
+  const characterNames = Array.from(allCharacterNames).sort();
+  
+  // Assign styles 1-5, cycling through if more than 5 characters
+  const characterStyleMap = new Map();
+  characterNames.forEach((name, index) => {
+    const styleNumber = (index % 5) + 1;
+    characterStyleMap.set(name, styleNumber);
+  });
+  
+  return characterStyleMap;
+}
+
 // Step 3: Format comic script into proper JSON structure
 async function formatComicScript(script, characterAnalysis) {
   log('🔧 STEP 3: Starting JSON formatting with character analysis...');
@@ -497,7 +582,7 @@ Convert this to the following JSON structure (respond with only valid JSON, no o
         {
           "name": "[Character name like 'Sarah' or 'Mike']",
           "emoji": "[Character's emoji from script]",
-          "style": [1-5 random number],
+          "style": "[IMPORTANT: Use consistent number 1-5 for same character across all panels]",
           "effect": [null, "shake", or "bounce" based on emotion]
         }
       ],
@@ -610,6 +695,25 @@ CRITICAL RULES:
     });
     
     log('🎯 Comic structure validation passed');
+    
+    // Ensure consistent character styles across panels (per-comic assignment)
+    log('🎨 Applying consistent character styles...');
+    const characterStyleMap = assignCharacterStyles(parsedComic);
+    
+    // Log the character assignments for this comic
+    characterStyleMap.forEach((style, name) => {
+      log(`🎭 Character "${name}" assigned style ${style}`);
+    });
+    
+    parsedComic.panels.forEach((panel, panelIndex) => {
+      panel.characters.forEach((character, charIndex) => {
+        if (character.name && characterStyleMap.has(character.name)) {
+          character.style = characterStyleMap.get(character.name);
+        }
+      });
+    });
+    
+    log('✅ Character style consistency applied');
     return parsedComic;
     
   } catch (parseError) {
@@ -710,6 +814,23 @@ CRITICAL RULES:
       }
     });
     
+    // Apply consistent character styles in fallback too (per-comic assignment)
+    log('🎨 Applying consistent character styles (fallback)...');
+    const characterStyleMap = assignCharacterStyles(parsedComic);
+    
+    // Log the character assignments for this comic
+    characterStyleMap.forEach((style, name) => {
+      log(`🎭 Fallback: Character "${name}" assigned style ${style}`);
+    });
+    
+    parsedComic.panels.forEach((panel, panelIndex) => {
+      panel.characters.forEach((character, charIndex) => {
+        if (character.name && characterStyleMap.has(character.name)) {
+          character.style = characterStyleMap.get(character.name);
+        }
+      });
+    });
+    
     return parsedComic;
   } catch (parseError) {
     log('❌ Fallback parsing also failed:', parseError.message);
@@ -753,9 +874,14 @@ async function generateComicWithAI(comicId, guidance) {
       concepts: concepts
     });
     
+    // Generate URL-safe comic ID based on title and date
+    const currentDate = new Date();
+    const finalComicId = await generateUniqueComicId(comicData.title, currentDate);
+    log('🆔 Generated final URL-safe comic ID:', finalComicId, 'from title:', comicData.title);
+    
     // Add metadata and styling
     const comic = {
-      id: comicId,
+      id: finalComicId,
       ...comicData,
       version: 2,
       tokens: tokens,
@@ -766,8 +892,17 @@ async function generateComicWithAI(comicId, guidance) {
         avoidedConcepts: guidance.avoidConcepts || [],
         encouragedConcepts: guidance.encourageConcepts || []
       },
-      timestamp: new Date().toISOString()
+      timestamp: currentDate.toISOString(),
+      createdAt: currentDate.toISOString()
     };
+
+    // Pre-generate URL navigation data (using comic ID as slug)
+    comic.urlNavigation = {
+      slug: comic.id, // Simple: just use the comic ID
+      generatedAt: new Date().toISOString()
+    };
+
+    log('🔗 Generated URL navigation (ID-based):', comic.urlNavigation);
 
     // Add backgrounds to panels
     comic.panels = comic.panels.map((panel, index) => ({
@@ -903,6 +1038,14 @@ async function saveComicToRedis(comic, userId) {
     // Add to global recent comics
     await kv.lpush('comics:recent', comic.id);
     await kv.ltrim('comics:recent', 0, 999); // Keep last 1000
+
+    // Create URL navigation index for fast lookup (comic ID -> comic ID, for consistency)
+    if (comic.urlNavigation?.slug) {
+      await kv.set(`url:${comic.urlNavigation.slug}`, comic.id, {
+        ex: 86400 * 30 // Same expiration as comic
+      });
+      log(`📑 Created URL index: url:${comic.id} -> ${comic.id}`);
+    }
 
     // Update stats
     await kv.hincrby('stats:comics', 'total', 1);

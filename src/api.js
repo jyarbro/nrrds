@@ -109,6 +109,15 @@ class ComicAPI {
     }
 
     /**
+     * Get a specific comic by ID (alias for getComic).
+     * @param {string} comicId - Comic ID.
+     * @returns {Promise<object>} The comic data.
+     */
+    async getComicById(comicId) {
+        return this.getComic(comicId);
+    }
+
+    /**
      * Submit feedback for a comic.
      * @param {string} comicId - Comic ID.
      * @param {string} feedbackType - Feedback type key.
@@ -131,16 +140,33 @@ class ComicAPI {
                 ...additionalData
             };
             
+            console.log('📤 [SUBMIT DEBUG] Submitting feedback:', {
+                url: '/api/submit-feedback',
+                requestData,
+                feedbackType,
+                comicId
+            });
+            
             const data = await this.fetchAPI('submit-feedback', {
                 method: 'POST',
                 body: JSON.stringify(requestData)
             });
+            
+            console.log('📤 [SUBMIT DEBUG] Feedback response:', data);
+            
             if (!data.success) {
+                console.error('📤 [SUBMIT DEBUG] Feedback failed:', data.error);
                 throw new Error(data.error || CONFIG.ERRORS.FEEDBACK_FAILED);
             }
             return data;
         } catch (error) {
-            console.error('Detailed feedback error:', error);
+            console.error('📤 [SUBMIT DEBUG] Feedback submission error:', {
+                message: error.message,
+                status: error.status,
+                details: error.details,
+                comicId,
+                feedbackType
+            });
             throw new Error(error.message || CONFIG.ERRORS.FEEDBACK_FAILED);
         }
     }
@@ -266,6 +292,7 @@ class ComicAPI {
             return [];
         }
     }
+
 }
 
 const comicAPI = new ComicAPI();

@@ -275,6 +275,9 @@ export default class ComicRenderer {
             const totalCharacters = characters.length;
             
             if (speakerIndex !== -1) {
+                const speakerCharacter = characters[speakerIndex];
+                
+                // Add positioning class
                 if (totalCharacters === 2) {
                     bubble.classList.add(speakerIndex === 0 ? 'arrow-left' : 'arrow-right');
                 } else if (totalCharacters === 3) {
@@ -295,6 +298,12 @@ export default class ComicRenderer {
                     } else {
                         bubble.classList.add('arrow-center');
                     }
+                }
+                
+                // Add character-specific arrow color
+                if (speakerCharacter && speakerCharacter.style) {
+                    const styleNumber = Math.max(1, Math.min(5, parseInt(speakerCharacter.style) || 1));
+                    bubble.classList.add(`character-${styleNumber}-arrow`);
                 }
             }
         }
