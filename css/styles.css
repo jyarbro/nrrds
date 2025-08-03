@@ -211,7 +211,6 @@ body::before {
 
 .main-content {
     max-width: 1100px;
-    margin: 0 auto;
     background: linear-gradient(145deg, rgba(220, 220, 220, 0.9), rgba(200, 205, 210, 0.9));
     border-radius: 20px;
     padding: 20px;
@@ -1270,7 +1269,7 @@ body::before {
    =================================================================== */
 
 .reactions-container {
-    margin: 30px auto 20px auto;
+    margin: 20px auto;
     padding: 20px;
     background: linear-gradient(145deg, #ffffff, #d0d0d0);
     border: 3px solid var(--border-color);
@@ -1300,12 +1299,13 @@ body::before {
     text-align: center;
     font-family: 'Bangers', cursive;
     font-size: 1.8rem;
-    margin: 0 0 20px 0;
+    margin: 30px auto 20px auto;
     color: #ffffff;
     text-shadow: 0 3px 0 rgba(0, 0, 0, 0.9);
     letter-spacing: 1px;
     position: relative;
     z-index: 1;
+    max-width: 800px;
 }
 
 .emoji-reactions-grid {
@@ -1314,6 +1314,7 @@ body::before {
     position: relative;
     z-index: 1;
     gap: 15px;
+    margin-top: -40px;
     margin-bottom: -35px;
     margin-left: -40px;
     margin-right: -40px;

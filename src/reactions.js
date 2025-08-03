@@ -44,6 +44,7 @@ export default class ReactionsSystem {
     show(comicId) {
         this.currentComicId = comicId;
         this.reactionsContainer.style.display = 'block';
+        this.reactionsTitle.style.display = 'block';
         this.resetButtonStates();
 
         const localKey = `comic_reactions_${comicId}`;
@@ -79,6 +80,7 @@ export default class ReactionsSystem {
      */
     hide() {
         this.reactionsContainer.style.display = 'none';
+        this.reactionsTitle.style.display = 'none';
         this.currentComicId = null;
     }
 
