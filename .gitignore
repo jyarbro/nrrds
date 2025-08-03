@@ -2,7 +2,9 @@
 .vercel/
 .github/
 .vscode/
+.screenshots/
 node_modules/
+mcp/
 
 package-lock.json
 .env
