@@ -144,7 +144,7 @@ export default async function handler(req, res) {
     const totalDuration = Date.now() - requestStartTime;
     log('🎉 REQUEST COMPLETED SUCCESSFULLY!', {
       requestId,
-      comicId,
+      comicId: comic.id,
       totalDuration: `${totalDuration}ms`,
       title: comic.title,
       panelCount: comic.panels?.length || 0
