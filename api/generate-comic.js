@@ -96,8 +96,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Extract variables at top level for error handler access
+  let userId, preferences = {}, tokenGuidance = {}, timestamp;
+
   try {
-    const { userId, preferences = {}, tokenGuidance = {}, timestamp } = req.body;
+    ({ userId, preferences = {}, tokenGuidance = {}, timestamp } = req.body);
     log('📥 Request payload:', { 
       requestId,
       userId, 
@@ -113,33 +116,55 @@ export default async function handler(req, res) {
     const tempComicId = `comic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     log('🆔 Generated temporary comic ID:', tempComicId, 'for request:', requestId);
 
-    log('🔄 Getting global token guidance...');
-    // Get aggregated token guidance from global feedback
-    const globalTokenGuidance = await getGlobalTokenGuidance();
-    log('📈 Global guidance retrieved:', {
-      avoidTokens: globalTokenGuidance.avoidTokens?.length || 0,
-      encourageTokens: globalTokenGuidance.encourageTokens?.length || 0,
-      avoidConcepts: globalTokenGuidance.avoidConcepts?.length || 0,
-      encourageConcepts: globalTokenGuidance.encourageConcepts?.length || 0
-    });
+    let globalTokenGuidance, combinedGuidance, comic;
+
+    try {
+      log('🔄 Getting global token guidance...');
+      // Get aggregated token guidance from global feedback
+      globalTokenGuidance = await getGlobalTokenGuidance();
+      log('📈 Global guidance retrieved:', {
+        avoidTokens: globalTokenGuidance.avoidTokens?.length || 0,
+        encourageTokens: globalTokenGuidance.encourageTokens?.length || 0,
+        avoidConcepts: globalTokenGuidance.avoidConcepts?.length || 0,
+        encourageConcepts: globalTokenGuidance.encourageConcepts?.length || 0
+      });
+    } catch (guidanceError) {
+      guidanceError.step = 'global_token_guidance';
+      throw guidanceError;
+    }
     
-    log('🔀 Combining user and global guidance...');
-    // Merge with user's personal token preferences (including temperature)
-    const combinedGuidance = await combineTokenGuidance(tokenGuidance, globalTokenGuidance, userId);
-    log('✅ Combined guidance ready:', {
-      totalAvoidTokens: combinedGuidance.avoidTokens?.length || 0,
-      totalEncourageTokens: combinedGuidance.encourageTokens?.length || 0,
-      totalAvoidConcepts: combinedGuidance.avoidConcepts?.length || 0,
-      totalEncourageConcepts: combinedGuidance.encourageConcepts?.length || 0
-    });
+    try {
+      log('🔀 Combining user and global guidance...');
+      // Merge with user's personal token preferences (including temperature)
+      combinedGuidance = await combineTokenGuidance(tokenGuidance, globalTokenGuidance, userId);
+      log('✅ Combined guidance ready:', {
+        totalAvoidTokens: combinedGuidance.avoidTokens?.length || 0,
+        totalEncourageTokens: combinedGuidance.encourageTokens?.length || 0,
+        totalAvoidConcepts: combinedGuidance.avoidConcepts?.length || 0,
+        totalEncourageConcepts: combinedGuidance.encourageConcepts?.length || 0
+      });
+    } catch (combineError) {
+      combineError.step = 'combine_guidance';
+      throw combineError;
+    }
 
-    log('🎨 Starting AI comic generation...');
-    // Generate comic using AI with token guidance
-    const comic = await generateComicWithAI(tempComicId, combinedGuidance);
+    try {
+      log('🎨 Starting AI comic generation...');
+      // Generate comic using AI with token guidance
+      comic = await generateComicWithAI(tempComicId, combinedGuidance);
+    } catch (generationError) {
+      generationError.step = 'ai_generation';
+      throw generationError;
+    }
 
-    log('💾 Saving comic to Redis...');
-    // Save comic to Redis
-    await saveComicToRedis(comic, userId);
+    try {
+      log('💾 Saving comic to Redis...');
+      // Save comic to Redis
+      await saveComicToRedis(comic, userId);
+    } catch (saveError) {
+      saveError.step = 'redis_save';
+      throw saveError;
+    }
 
     const totalDuration = Date.now() - requestStartTime;
     log('🎉 REQUEST COMPLETED SUCCESSFULLY!', {
@@ -166,18 +191,43 @@ export default async function handler(req, res) {
     log('❌ REQUEST FAILED:', {
       requestId,
       error: error.message,
+      errorName: error.name,
+      errorCode: error.code,
       duration: `${totalDuration}ms`,
-      stack: error.stack?.slice(0, 300)
+      stack: error.stack?.slice(0, 500),
+      userId: userId || 'unknown',
+      preferences: Object.keys(preferences || {}),
+      tokenGuidance: Object.keys(tokenGuidance || {})
     });
-    return res.status(500).json({
+    
+    // More detailed error response for debugging
+    const detailedError = {
       success: false,
       error: 'Failed to generate comic',
+      details: {
+        message: error.message,
+        name: error.name,
+        code: error.code,
+        step: error.step || 'unknown'
+      },
       meta: {
         requestId,
         duration: totalDuration,
         timestamp: new Date().toISOString()
       }
-    });
+    };
+    
+    // In development, include more details
+    if (process.env.NODE_ENV === 'development') {
+      detailedError.debug = {
+        stack: error.stack,
+        userId: userId || 'unknown',
+        preferences,
+        tokenGuidance
+      };
+    }
+    
+    return res.status(500).json(detailedError);
   }
 }
 
@@ -380,102 +430,184 @@ async function combineTokenGuidance(personalGuidance, globalGuidance, userId) {
   }
 }
 
-// Step 1: Generate comic script with creative freedom
+// Helper function to validate GPT responses
+function validateGPTResponse(response, stepName) {
+  if (!response) {
+    throw new Error(`${stepName}: No response received from GPT`);
+  }
+  
+  // Handle Responses API (GPT-5)
+  if (response.status !== undefined) {
+    if (response.status === 'incomplete') {
+      throw new Error(`${stepName}: GPT-5 response incomplete. Reason: ${response.incomplete_details?.reason || 'unknown'}`);
+    }
+    if (response.status !== 'completed') {
+      throw new Error(`${stepName}: GPT-5 response status: ${response.status}`);
+    }
+    if (!response.output_text || response.output_text.length === 0) {
+      throw new Error(`${stepName}: GPT-5 returned empty output_text`);
+    }
+    return response.output_text;
+  }
+  
+  // Handle Chat Completions API (GPT-4o, GPT-4o-mini)
+  if (response.choices && response.choices.length > 0) {
+    const message = response.choices[0].message;
+    if (!message || !message.content || message.content.length === 0) {
+      throw new Error(`${stepName}: GPT returned empty content`);
+    }
+    return message.content;
+  }
+  
+  throw new Error(`${stepName}: Invalid response structure`);
+}
+
+// Step 1: Generate comic script with enhanced structure and humor dial
 async function generateComicScript(guidance) {
-  log('🎬 STEP 1: Starting creative comic script generation...');
+  const cfg = normalizeGuidance(guidance);
+  
+  log('🎬 STEP 1 (Enhanced): Starting creative comic script generation...', {
+    humorLevel: cfg.humorLevel,
+    panelCount: cfg.panelCount,
+    temperature: cfg.temperature,
+    maxTokens: cfg.maxTokens
+  });
   
   // Check for overused themes and add them to avoid list
-  const overusedThemes = await getOverusedThemes();
-  const combinedAvoidConcepts = [...(guidance.avoidConcepts || []), ...overusedThemes];
+  const overusedThemes = await safeGetOverusedThemes();
+  const combinedAvoidConcepts = [...(cfg.avoidConcepts || []), ...(overusedThemes || [])];
   
-  // Build token guidance prompt
-  const avoidSection = guidance.avoidTokens?.length > 0 ? 
-    `AVOID these patterns that users found uninteresting: ${guidance.avoidTokens.join(', ')}` : '';
-  
-  const encourageSection = guidance.encourageTokens?.length > 0 ? 
-    `ENCOURAGE these patterns users enjoyed: ${guidance.encourageTokens.join(', ')}` : '';
-  
-  const conceptAvoidSection = combinedAvoidConcepts.length > 0 ? 
-    `AVOID these overused themes: ${combinedAvoidConcepts.join(', ')}` : '';
-  
-  const conceptEncourageSection = guidance.encourageConcepts?.length > 0 ? 
-    `CONSIDER these themes: ${guidance.encourageConcepts.join(', ')}` : '';
+  // Build enhanced guidance prompt with sections
+  const guidancePrompt = buildGuidancePrompt({
+    avoidTokens: cfg.avoidTokens,
+    encourageTokens: cfg.encourageTokens,
+    avoidConcepts: combinedAvoidConcepts,
+    encourageConcepts: cfg.encourageConcepts,
+    styleRefs: cfg.styleRefs,
+    humorLevel: cfg.humorLevel,
+    panelCount: cfg.panelCount
+  });
 
-  const guidancePrompt = [avoidSection, encourageSection, conceptAvoidSection, conceptEncourageSection]
-    .filter(section => section.length > 0)
-    .join('\n');
-
-  log('📋 Guidance applied:', {
-    avoidTokens: guidance.avoidTokens?.length || 0,
-    encourageTokens: guidance.encourageTokens?.length || 0,
-    avoidConcepts: guidance.avoidConcepts?.length || 0,
-    encourageConcepts: guidance.encourageConcepts?.length || 0,
+  log('📋 Enhanced guidance applied:', {
+    avoidTokens: cfg.avoidTokens?.length || 0,
+    encourageTokens: cfg.encourageTokens?.length || 0,
+    avoidConcepts: combinedAvoidConcepts?.length || 0,
+    encourageConcepts: cfg.encourageConcepts?.length || 0,
+    humorLevel: cfg.humorLevel,
+    styleRefs: cfg.styleRefs,
     guidancePrompt: guidancePrompt.slice(0, 200) + (guidancePrompt.length > 200 ? '...' : '')
   });
 
-  const prompt = `You are a creative comic writer. Create a humorous comic strip script for 3-4 panels.
+  // Enhanced main prompt with explicit comedic guidance
+  const prompt = [
+    `You are a top-tier comic writer and visual gag architect.`,
+    `Write a funny, original comic strip script for ${cfg.panelCount} panel${cfg.panelCount === 1 ? '' : 's'}.`,
+    `Use strong comedic timing, clear speaker attribution, and a complete story arc (setup → escalation → punchline).`,
+    '',
+    guidancePrompt,
+    '',
+    `CRITICAL OUTPUT RULES:`,
+    `- For EACH panel:`,
+    `  * Provide time/location context (e.g., "Saturday afternoon, at the bookstore").`,
+    `  * List each character who appears: Name + an identifying emoji (keep separate).`,
+    `  * Clearly label who says/thinks each line using the character name only.`,
+    `  * Progress the story toward the punchline.`,
+    `- Keep it SFW, inclusive, and non-mean-spirited.`,
+    `- Do NOT use JSON; write natural descriptive text with explicit character tags.`,
+    '',
+    `CLARITY EXAMPLE (formatting only):`,
+    `Saturday morning, neighborhood yard sale`,
+    `Characters: Alex (😊), Sam (🤔)`,
+    `Alex: "I brought exact change and zero self-control."`,
+    `Sam: "What could go wrong?"`,
+    `Alex thinks: "Everything. Ideally in a hilarious way."`
+  ].join('\n');
 
-${guidancePrompt || 'Create original, relatable humor'}
-
-IMPORTANT: Focus on creativity and storytelling. Explore diverse themes beyond typical office/coffee/sleep humor.
-
-Theme Variety Guidelines:
-- Consider fresh perspectives on: hobbies, social situations, exercise, food adventures, technology mishaps, relationship dynamics, family moments, or creative pursuits
-- Avoid repetitive scenarios about being tired, needing coffee, or workplace stress unless specifically encouraged
-- Think about universal experiences that aren't just about exhaustion or caffeine dependency
-
-Requirements:
-- Create 3-4 panels that tell a complete story (setup, development, punchline)
-- CLEARLY identify all characters who speak or appear in each panel
-- For each character, specify:
-  * Their name (like "Alex", "Mom", "Boss", "Friend", etc.)
-  * An emoji that represents them (like 😊 for happy person, 🎨 for creative person, 👩‍💼 for professional, etc.)
-  * What they say or think in that panel
-- Each panel should have:
-  * A time/location context (like "Saturday afternoon" or "At the bookstore")
-  * Clear indication of WHO is speaking/thinking each line
-  * Clear progression toward the punchline
-- Make it relatable, funny, and suitable for all audiences
-- Focus on diverse universal experiences like hobbies, social interactions, creative pursuits, exercise, food, technology, relationships, family dynamics, etc.
-
-CRITICAL: If multiple people speak in a panel, make it VERY clear who says what. For example:
-"Panel 1: At the office, 9 AM
-Sarah (😊): Good morning! Ready for the big presentation?
-Mike (😰): I forgot we had a presentation today!
-Sarah thinks to herself: This is going to be a long day..."
-
-Write your comic script in a natural, descriptive way. Don't format it as JSON - just tell the story with clear character identification.`;
-
-  log('🤖 Sending request to GPT-4o for script generation...');
+  log('🤖 Sending request to GPT-5 (thinking) for enhanced script generation...');
   log('📝 Prompt length:', prompt.length, 'characters');
   
   const startTime = Date.now();
   
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: "You are a creative comic writer who understands humor, timing, and relatable situations. Write engaging comic scripts that people will find funny and relatable."
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    temperature: 0.9,
-    max_tokens: 1000
-  });
+  let response;
+  try {
+    response = await openai.responses.create({
+      model: "gpt-5",
+      reasoning: { effort: "high" }, // Use high reasoning effort for maximum creativity
+      input: [
+        {
+          role: "system",
+          content: "You are an INNOVATIVE, WILDLY CREATIVE comic writer and visual comedy architect! UNLEASH YOUR IMAGINATION! Break conventional patterns, surprise readers, craft unexpected twists, and build hilarious escalations. Be BOLD with visual gags, character reactions, and comedic timing. Push boundaries of humor while staying SFW. Think like a comedy genius - subvert expectations, create memorable moments, and make readers laugh out loud with your inventive storytelling!"
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_output_tokens: Math.max(cfg.maxTokens, 25000) // Reserve sufficient tokens for high reasoning effort
+    });
+  } catch (apiError) {
+    apiError.step = 'openai_script_generation';
+    log('❌ OpenAI API error in script generation:', {
+      message: apiError.message,
+      status: apiError.status,
+      code: apiError.code,
+      model: 'gpt-5'
+    });
+    throw apiError;
+  }
 
   const duration = Date.now() - startTime;
-  const script = completion.choices[0].message.content;
   
-  log('✅ GPT-4o script generation completed!', {
+  // Debug the response structure for GPT-5 Responses API
+  log('🔍 GPT-5 response structure debug:', {
+    status: response.status,
+    outputText: response.output_text?.length || 'no output_text',
+    usage: response.usage ? 'present' : 'no usage',
+    incompleteReason: response.incomplete_details?.reason || 'none'
+  });
+  
+  // Check if response is incomplete due to token limits
+  if (response.status === 'incomplete') {
+    if (response.incomplete_details?.reason === 'max_output_tokens') {
+      log('⚠️ GPT-5 response incomplete due to max_output_tokens. Retrying with higher limit...');
+      // Retry with doubled token limit
+      const retryResponse = await openai.responses.create({
+        model: "gpt-5",
+        reasoning: { effort: "medium" }, // Use medium effort for retry to balance tokens
+        input: [
+          {
+            role: "system",
+            content: "You are an INNOVATIVE, WILDLY CREATIVE comic writer and visual comedy architect! UNLEASH YOUR IMAGINATION! Break conventional patterns, surprise readers, craft unexpected twists, and build hilarious escalations. Be BOLD with visual gags, character reactions, and comedic timing. Push boundaries of humor while staying SFW. Think like a comedy genius - subvert expectations, create memorable moments, and make readers laugh out loud with your inventive storytelling!"
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_output_tokens: Math.max(cfg.maxTokens, 25000) * 2
+      });
+      
+      if (retryResponse.status === 'completed' && retryResponse.output_text) {
+        log('✅ Retry successful with medium reasoning effort');
+        response = retryResponse;
+      } else {
+        throw new Error(`GPT-5 retry failed. Status: ${retryResponse.status}, Reason: ${retryResponse.incomplete_details?.reason || 'unknown'}`);
+      }
+    } else {
+      throw new Error(`GPT-5 response incomplete. Reason: ${response.incomplete_details?.reason || 'unknown'}`);
+    }
+  }
+  
+  // Validate and extract script content using helper function
+  const script = validateGPTResponse(response, 'Script Generation');
+  
+  log('✅ GPT-5 enhanced script generation completed!', {
     duration: `${duration}ms`,
     scriptLength: script.length,
-    tokensUsed: completion.usage?.total_tokens || 'unknown',
-    promptTokens: completion.usage?.prompt_tokens || 'unknown',
-    completionTokens: completion.usage?.completion_tokens || 'unknown'
+    tokensUsed: response.usage?.total_tokens || 'unknown',
+    inputTokens: response.usage?.input_tokens || 'unknown',
+    outputTokens: response.usage?.output_tokens || 'unknown',
+    reasoningTokens: response.usage?.output_tokens_details?.reasoning_tokens || 'unknown'
   });
   
   log('📜 Generated script preview:', script.slice(0, 300) + (script.length > 300 ? '...' : ''));
@@ -499,40 +631,53 @@ For each panel, identify:
 4. Whether each line is speech, thought, or narration
 
 Respond with a detailed analysis in this format:
-Panel 1:
+First scene:
 - Characters: [list with names and emojis]
 - Dialogue assignments: [who says what]
 - Types: [speech/thought for each line]
 
-Panel 2:
+Next scene:
 - Characters: [list with names and emojis]
 - Dialogue assignments: [who says what]
 - Types: [speech/thought for each line]
 
 Be extremely careful about character consistency and dialogue attribution.`;
 
-  log('🤖 Sending character analysis request to GPT-4o-mini...');
+  log('🤖 Sending character analysis request to GPT-5 (non-thinking)...');
   
   const startTime = Date.now();
   
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: "You are a precise script analyst. Carefully identify characters and dialogue attribution in comic scripts."
-      },
-      {
-        role: "user",
-        content: analysisPrompt
-      }
-    ],
-    temperature: 0.2,
-    max_tokens: 800
-  });
+  let completion;
+  try {
+    completion = await openai.chat.completions.create({
+      model: "gpt-5-chat-latest",
+      messages: [
+        {
+          role: "system",
+          content: "You are a METHODICAL script analyst. Analyze with systematic precision. Identify characters and dialogue attribution with forensic accuracy. Be thorough, systematic, and detailed in your analysis. Leave no character unnamed, no dialogue unattributed."
+        },
+        {
+          role: "user",
+          content: analysisPrompt
+        }
+      ],
+      max_completion_tokens: 800
+    });
+  } catch (apiError) {
+    apiError.step = 'openai_character_analysis';
+    log('❌ OpenAI API error in character analysis:', {
+      message: apiError.message,
+      status: apiError.status,
+      code: apiError.code,
+      model: 'gpt-5-chat-latest'
+    });
+    throw apiError;
+  }
 
   const duration = Date.now() - startTime;
-  const analysis = completion.choices[0].message.content;
+  
+  // Validate response before extracting content
+  const analysis = validateGPTResponse(completion, 'Character Analysis');
   
   log('✅ Character analysis completed!', {
     duration: `${duration}ms`,
@@ -595,8 +740,8 @@ Convert this to the following JSON structure (respond with only valid JSON, no o
       "header": "[Time/location from script]",
       "characters": [
         {
-          "name": "[Character name like 'Sarah' or 'Mike']",
-          "emoji": "[Character's emoji from script]",
+          "name": "[Character name like 'Sarah' or 'Mike' - do NOT include emoji in name]",
+          "emoji": "[Character's emoji from script - separate from name]",
           "style": "[IMPORTANT: Use consistent number 1-5 for same character across all panels]",
           "effect": [null, "shake", or "bounce" based on emotion]
         }
@@ -617,40 +762,64 @@ CRITICAL RULES:
 - If only ONE character speaks in a panel, include only that character in "characters" array
 - If MULTIPLE characters speak, include ALL speaking characters in "characters" array
 - Every dialogue entry MUST have a "speaker" field matching a character name
-- Use exact character names and emojis from the analysis
+- Character names must NOT include emojis - separate name from emoji (e.g. "Lina" not "Lina (🧢)")
+- Use exact character names and emojis from the analysis but keep them separate
 - Only include dialogue/thoughts that were in the original script
 - Respond with ONLY the JSON object, no other text`;
 
-  log('🤖 Sending formatting request to GPT-4o...');
+  log('🤖 Sending STRICT formatting request to GPT-5-nano...');
   log('📏 Format prompt length:', formatPrompt.length, 'characters');
   
   const startTime = Date.now();
   
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: "You are a precise formatter. Convert comic scripts to JSON format exactly as requested. Respond only with valid JSON."
-      },
-      {
-        role: "user",
-        content: formatPrompt
-      }
-    ],
-    temperature: 0.2,
-    max_tokens: 1200
-  });
+  let completion;
+  try {
+    completion = await openai.responses.create({
+      model: "gpt-5-nano",
+      reasoning: { effort: "minimal" }, // Minimal reasoning for fast, deterministic formatting
+      input: [
+        {
+          role: "system",
+          content: "You are a STRICT, PRECISE formatter. Your ONLY job is to convert text to EXACT JSON format. Do not be creative. Do not add content. Do not interpret. Simply format the provided content into the requested JSON structure with perfect accuracy. Output ONLY valid JSON, nothing else."
+        },
+        {
+          role: "user",
+          content: formatPrompt
+        }
+      ],
+      max_output_tokens: 1800 // Increased to handle complex multi-character comics
+    });
+  } catch (apiError) {
+    apiError.step = 'openai_format_script';
+    log('❌ OpenAI API error in script formatting:', {
+      message: apiError.message,
+      status: apiError.status,
+      code: apiError.code,
+      model: 'gpt-5-nano'
+    });
+    throw apiError;
+  }
 
   const duration = Date.now() - startTime;
-  const jsonResponse = completion.choices[0].message.content;
   
-  log('✅ GPT-4o formatting completed!', {
+  // Debug the response object structure (now using Responses API)
+  log('🔍 Main formatting response debug:', {
+    status: completion.status,
+    outputText: completion.output_text?.length || 'no output_text',
+    usage: completion.usage ? 'present' : 'no usage',
+    incompleteReason: completion.incomplete_details?.reason || 'none'
+  });
+  
+  // Validate response before extracting content
+  const jsonResponse = validateGPTResponse(completion, 'Script Formatting');
+  
+  log('✅ GPT-5-nano STRICT formatting completed!', {
     duration: `${duration}ms`,
     responseLength: jsonResponse.length,
     tokensUsed: completion.usage?.total_tokens || 'unknown',
-    promptTokens: completion.usage?.prompt_tokens || 'unknown',
-    completionTokens: completion.usage?.completion_tokens || 'unknown'
+    inputTokens: completion.usage?.input_tokens || 'unknown',
+    outputTokens: completion.usage?.output_tokens || 'unknown',
+    reasoningTokens: completion.usage?.output_tokens_details?.reasoning_tokens || 'unknown'
   });
   
   log('🧪 Attempting JSON parsing...');
@@ -764,36 +933,58 @@ SCRIPT: ${script}
 ANALYSIS: ${characterAnalysis}
 
 OUTPUT ONLY THIS JSON STRUCTURE:
-{"title":"[title]","panels":[{"header":"[time/location]","characters":[{"name":"[character name]","emoji":"[emoji]","style":1,"effect":null}],"dialogue":[{"text":"[dialogue text]","speaker":"[character name]","type":"speech","style":"normal"}]}]}
+{"title":"[title]","panels":[{"header":"[time/location]","characters":[{"name":"[character name without emoji]","emoji":"[emoji]","style":1,"effect":null}],"dialogue":[{"text":"[dialogue text]","speaker":"[character name without emoji]","type":"speech","style":"normal"}]}]}
 
 CRITICAL RULES:
 - Output ONLY JSON, nothing else
 - Do not use markdown code blocks
 - Do not add explanations
 - Use double quotes for all strings
-- Every dialogue must have a speaker that matches a character name
+- Character names must NOT include emojis - separate name from emoji
+- Every dialogue must have a speaker that matches a character name (without emoji)
 - Include all characters who speak in each panel
 - Ensure valid JSON syntax`;
 
-  log('🤖 Sending fallback formatting request...');
+  log('🤖 Sending fallback formatting request to GPT-5-nano...');
   
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: "You are a JSON formatter. Output only valid JSON, never use markdown or explanations."
-      },
-      {
-        role: "user",
-        content: strictFormatPrompt
-      }
-    ],
-    temperature: 0.1,
-    max_tokens: 1000
+  let completion;
+  try {
+    completion = await openai.responses.create({
+      model: "gpt-5-nano",
+      reasoning: { effort: "minimal" }, // Minimal reasoning for deterministic fallback formatting
+      input: [
+        {
+          role: "system",
+          content: "You are a MECHANICAL JSON formatter. Execute EXACTLY as instructed. No creativity, no interpretation, no additions. Convert input to JSON format with robotic precision. Output ONLY valid JSON, never markdown or explanations."
+        },
+        {
+          role: "user",
+          content: strictFormatPrompt
+        }
+      ],
+      max_output_tokens: 1800 // Match main formatting capacity for consistency
+    });
+  } catch (apiError) {
+    apiError.step = 'openai_fallback_format';
+    log('❌ OpenAI API error in fallback formatting:', {
+      message: apiError.message,
+      status: apiError.status,
+      code: apiError.code,
+      model: 'gpt-5-nano'
+    });
+    throw apiError;
+  }
+
+  // Debug the response object structure (now using Responses API)
+  log('🔍 Fallback response debug:', {
+    status: completion.status,
+    outputText: completion.output_text?.length || 'no output_text',
+    usage: completion.usage ? 'present' : 'no usage',
+    incompleteReason: completion.incomplete_details?.reason || 'none'
   });
 
-  const jsonResponse = completion.choices[0].message.content;
+  // Validate response before extracting content
+  const jsonResponse = validateGPTResponse(completion, 'Fallback Formatting');
   log('🔍 Fallback response preview:', jsonResponse.slice(0, 100));
   
   // More aggressive cleaning
@@ -854,14 +1045,130 @@ CRITICAL RULES:
   }
 }
 
+// Helper functions for enhanced comic generation
+
+function normalizeGuidance(input = {}) {
+  return {
+    avoidTokens: toArray(input.avoidTokens),
+    encourageTokens: toArray(input.encourageTokens),
+    avoidConcepts: toArray(input.avoidConcepts),
+    encourageConcepts: toArray(input.encourageConcepts),
+    humorLevel: clampNumber(input.humorLevel, 0, 11, 8),
+    panelCount: [3, 4].includes(Number(input.panelCount)) ? Number(input.panelCount) : 3,
+    styleRefs: toArray(input.styleRefs),
+    temperature: typeof input.temperature === 'number' ? input.temperature : 0.9,
+    maxTokens: typeof input.maxTokens === 'number' ? input.maxTokens : 1500, // Increased for more detailed scripts
+    signal: input.signal
+  };
+}
+
+function toArray(val) {
+  if (!val) return [];
+  return Array.isArray(val) ? val.filter(Boolean) : [val].filter(Boolean);
+}
+
+function clampNumber(val, min, max, fallback) {
+  const n = typeof val === 'number' ? val : fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+async function safeGetOverusedThemes() {
+  try {
+    return await getOverusedThemes();
+  } catch (e) {
+    log('⚠️ getOverusedThemes failed; continuing without it.', { message: e?.message });
+    return [];
+  }
+}
+
+function buildGuidancePrompt({
+  avoidTokens = [],
+  encourageTokens = [],
+  avoidConcepts = [],
+  encourageConcepts = [],
+  styleRefs = [],
+  humorLevel = 8,
+  panelCount = 3
+}) {
+  const sections = [];
+
+  // Funny Dial — calibrates intensity of humor
+  const funnyDial = `FUNNY DIAL: ${humorLevel} / 11\n` +
+    `- 0–3: Light wit, observational, grounded.\n` +
+    `- 4–7: Punchy, playful, occasional absurdity.\n` +
+    `- 8–10: Bold exaggeration, unexpected twists, visual gags, meta asides.\n` +
+    `- 11: Max chaos (still SFW): surreal misdirection, background gags, rule-of-three escalations, and a sharp, surprising punchline.`;
+
+  sections.push(funnyDial);
+
+  if (styleRefs.length) {
+    sections.push(`STYLE REFERENCES (vibes only, do not imitate directly): ${styleRefs.join(', ')}`);
+  }
+
+  if (encourageTokens.length) {
+    sections.push(`ENCOURAGE these language/comedic patterns users enjoyed: ${encourageTokens.join(', ')}`);
+  }
+
+  if (avoidTokens.length) {
+    sections.push(`AVOID these language patterns users found uninteresting: ${avoidTokens.join(', ')}`);
+  }
+
+  if (encourageConcepts.length) {
+    sections.push(`CONSIDER these themes: ${encourageConcepts.join(', ')}`);
+  }
+
+  if (avoidConcepts.length) {
+    sections.push(`AVOID these overused themes: ${avoidConcepts.join(', ')}`);
+  }
+
+  sections.push([
+    'CREATIVE DIRECTION:',
+    `- Prefer fresh perspectives across: hobbies, social situations, exercise, food adventures, tech mishaps, relationships, family moments, creative pursuits.`,
+    `- Avoid repetitive "tired/coffee/workplace stress" setups unless explicitly encouraged.`,
+    `- Think universal experiences beyond exhaustion/caffeine; aim for surprise over cynicism.`,
+    `- Include at least one background gag or visual aside that pays off on a second read.`,
+    `- Build to a clear punchline in panel ${panelCount}.`
+  ].join('\n'));
+
+  sections.push([
+    'STRUCTURE REQUIREMENTS:',
+    `- ${panelCount} panels; complete story (setup → development → punchline).`,
+    `- EACH PANEL MUST INCLUDE:`,
+    `  • Time/location context.`,
+    `  • Character list with Name + emoji (keep separate).`,
+    `  • Explicit speaker/thinker tags using character names only.`,
+    `  • A step toward the final gag.`,
+    `- Keep it suitable for all audiences; no slurs or cruelty.`
+  ].join('\n'));
+
+  return sections.join('\n\n');
+}
+
 // Generate comic using OpenAI with two-step validation
 async function generateComicWithAI(comicId, guidance) {
   try {
-    log('🚀 Starting two-step comic generation process for:', comicId);
+    log('🚀 Starting enhanced two-step comic generation process for:', comicId);
     const overallStartTime = Date.now();
     
-    // Step 1: Generate comic script with creative freedom
-    const comicScript = await generateComicScript(guidance);
+    // Enhance guidance with humor level and other parameters
+    const enhancedGuidance = {
+      ...guidance,
+      humorLevel: guidance.humorLevel || 8, // Default to level 8
+      panelCount: guidance.panelCount || 3, // Default to 3 panels
+      styleRefs: guidance.styleRefs || [], // Optional style references
+      temperature: guidance.temperature || 0.9, // Default temperature
+      maxTokens: guidance.maxTokens || 1000 // Default token limit
+    };
+    
+    log('🎨 Enhanced guidance parameters:', {
+      humorLevel: enhancedGuidance.humorLevel,
+      panelCount: enhancedGuidance.panelCount,
+      styleRefs: enhancedGuidance.styleRefs,
+      temperature: enhancedGuidance.temperature
+    });
+    
+    // Step 1: Generate comic script with enhanced creative freedom
+    const comicScript = await generateComicScript(enhancedGuidance);
     
     // Step 2: Analyze characters and dialogue for accurate assignment
     const characterAnalysis = await analyzeCharacters(comicScript);
