@@ -274,11 +274,12 @@ export default class ReactionsSystem {
         if (!statsElement.innerHTML.includes('reaction-stat') && !isDecrement) {
             const reactionData = CONFIG.FEEDBACK_TYPES[reactionType];
             if (reactionData) {
+                const maxSize = 3.5; // Match the max size from displayStats
                 statsElement.innerHTML = `
                     <div class="reactions-title-small">Fan Reactions</div>
                     <div class="all-reactions">
                         <span class="reaction-stat" data-reaction-type="${reactionType}" data-count="1">
-                            <span class="reaction-emoji">${reactionData.emoji}</span>
+                            <span class="reaction-emoji" style="font-size: ${maxSize}rem;">${reactionData.emoji}</span>
                         </span>
                     </div>
                 `;
@@ -324,22 +325,61 @@ export default class ReactionsSystem {
                     newStat.className = 'reaction-stat';
                     newStat.setAttribute('data-reaction-type', reactionType);
                     newStat.setAttribute('data-count', '1');
+                    const maxSize = 3.5; // Match the max size from displayStats
                     newStat.innerHTML = `
-                        <span class="reaction-emoji">${reactionData.emoji}</span>
+                        <span class="reaction-emoji" style="font-size: ${maxSize}rem;">${reactionData.emoji}</span>
                     `;
                     allReactionsDiv.appendChild(newStat);
                 } else {
                     // Create the all-reactions div if it doesn't exist
+                    const maxSize = 3.5; // Match the max size from displayStats
                     statsElement.innerHTML = `
                         <div class="all-reactions">
                             <span class="reaction-stat" data-reaction-type="${reactionType}" data-count="1">
-                                <span class="reaction-emoji">${reactionData.emoji}</span>
+                                <span class="reaction-emoji" style="font-size: ${maxSize}rem;">${reactionData.emoji}</span>
                             </span>
                         </div>
                     `;
                 }
             }
         }
+        
+        // After updating counts, recalculate proportional sizes for all reactions
+        this.recalculateProportionalSizes(statsElement);
+    }
+
+    /**
+     * Recalculate proportional sizes for all reaction emojis based on their counts
+     * @param {HTMLElement} statsElement - The stats container element
+     */
+    recalculateProportionalSizes(statsElement) {
+        const reactionStats = statsElement.querySelectorAll('.reaction-stat');
+        if (reactionStats.length === 0) return;
+        
+        // Get all counts
+        const counts = Array.from(reactionStats).map(stat => 
+            parseInt(stat.getAttribute('data-count') || '0')
+        ).filter(count => count > 0);
+        
+        if (counts.length === 0) return;
+        
+        const maxCount = Math.max(...counts);
+        const minSizeRatio = 0.3; // Minimum size is 30% of max
+        const maxSize = 3.5; // Maximum size in rem
+        
+        // Update each reaction emoji size
+        reactionStats.forEach(statElement => {
+            const count = parseInt(statElement.getAttribute('data-count') || '0');
+            if (count > 0) {
+                const sizeRatio = Math.max(minSizeRatio, count / maxCount);
+                const fontSize = (maxSize * sizeRatio).toFixed(2);
+                
+                const emojiElement = statElement.querySelector('.reaction-emoji');
+                if (emojiElement) {
+                    emojiElement.style.fontSize = `${fontSize}rem`;
+                }
+            }
+        });
     }
 
     /**
@@ -459,25 +499,40 @@ export default class ReactionsSystem {
             .filter(([key, value]) => !excludeFields.includes(key))
             .filter(([,count]) => count > 0)
             .sort(([typeA, countA], [typeB, countB]) => {
+                // Sort by count first (most common to least common)
+                if (countA !== countB) {
+                    return countB - countA;
+                }
+                // If counts are equal, sort by weight as tiebreaker
                 const weightA = CONFIG.FEEDBACK_TYPES[typeA]?.weight || 0;
                 const weightB = CONFIG.FEEDBACK_TYPES[typeB]?.weight || 0;
-                if (weightA !== weightB) {
-                    return weightB - weightA;
-                }
-                return countB - countA;
+                return weightB - weightA;
             });
         
         console.log('🎭 [DISPLAY DEBUG] All reactions to display:', allReactions);
         
         if (allReactions.length > 0) {
+            // Calculate proportional sizes
+            const maxCount = Math.max(...allReactions.map(([,count]) => count));
+            const minSizeRatio = 0.3; // Minimum size is 30% of max
+            const maxSize = 3.5; // Maximum size in rem (increased from 2rem)
+            
             statsHTML += '<div class="all-reactions">';
             allReactions.forEach(([type, count]) => {
                 const reactionData = CONFIG.FEEDBACK_TYPES[type];
                 console.log(`🎭 [DISPLAY DEBUG] Processing reaction ${type}:`, { count, reactionData });
                 if (reactionData && count > 0) {
+                    // Calculate proportional size
+                    const sizeRatio = Math.max(minSizeRatio, count / maxCount);
+                    const fontSize = (maxSize * sizeRatio).toFixed(2);
+                    
+                    console.log(`🎭 [DISPLAY DEBUG] Size calculation for ${type}:`, { 
+                        count, maxCount, sizeRatio, fontSize 
+                    });
+                    
                     statsHTML += `
                         <span class="reaction-stat" data-reaction-type="${type}" data-count="${count}">
-                            <span class="reaction-emoji">${reactionData.emoji}</span>
+                            <span class="reaction-emoji" style="font-size: ${fontSize}rem;">${reactionData.emoji}</span>
                         </span>
                     `;
                 }
